@@ -20,23 +20,50 @@ enum Role {
 }
 
 model User {
-  id          String   @id @default(uuid()) 
-  email       String   @unique
-  isVerified  Boolean  @default(false)
-  role        Role     @default(USER)
-  phoneNumber String
+  id          String         @id @default(uuid())
+  email       String         @unique
+  isVerified  Boolean        @default(false)
+  role        Role           @default(USER)
+  phoneNumber String         @unique
   name        String
   gender      String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @default(now())
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @default(now())
   auth        Auth?
+  token       AuthOtpToken[]
 }
 
 model Auth {
-  id       String @id @default(uuid()) 
+  id       String @id @default(uuid())
   password String
   user     User   @relation(fields: [userId], references: [id])
   userId   String @unique
 }
 
+enum AuthOtpTokenType {
+  TOKEN
+  OTP
+}
 
+model AuthOtpToken {
+  id       String           @id @default(uuid())
+  subject  String
+  type     AuthOtpTokenType @default(OTP)
+  code     String
+  expiry   DateTime
+  email    String
+  user     User?            @relation(fields: [userId], references: [id])
+  userId   String?
+  hotel   Hotel?          @relation(fields: [hotelId], references: [id])
+  hotelId String?
+
+  @@index([code])
+  @@index([email])
+}
+
+model Hotel {
+  id    String         @id @default(uuid())
+  name  String
+  email String
+  token AuthOtpToken[]
+}
