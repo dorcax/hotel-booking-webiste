@@ -49,7 +49,7 @@ model AuthOtpToken {
   id       String           @id @default(uuid())
   subject  String
   type     AuthOtpTokenType @default(OTP)
-  code     String
+  code     String @unique
   expiry   DateTime
   email    String
   user     User?            @relation(fields: [userId], references: [id])

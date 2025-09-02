@@ -1,11 +1,11 @@
 
 import{IsEmail, IsString} from "class-validator"
 
-
 export const Auth_Otp_Token_Subject ={
     Verify_Email:"verify email",
     RESET_PASSWORD:"RESET Password"
 }
+
 export class registerDto {
     @IsString()
     name:string
@@ -31,5 +31,25 @@ export class loginDto{
     email:string
     @IsString()
     password:string
+}
+
+
+export class verifyEmailDto{
+    @IsString()
+    code:string
+}
+
+export class resetPasswordDto{
+     @IsString()
+    code:string
+     @IsString()
+    password:string
+     @IsString()
+    email:string
+}
+
+export class forgotPasswordDto{
+    @IsEmail()
+    email:string
 }
 

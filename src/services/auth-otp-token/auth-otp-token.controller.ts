@@ -12,23 +12,6 @@ export class AuthOtpTokenController {
     return this.authOtpTokenService.create(createAuthOtpTokenDto);
   }
 
-  @Get()
-  findAll() {
-    return this.authOtpTokenService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.authOtpTokenService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateAuthOtpTokenDto: UpdateAuthOtpTokenDto) {
-    return this.authOtpTokenService.update(+id, updateAuthOtpTokenDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.authOtpTokenService.remove(+id);
-  }
+  
+ 
 }

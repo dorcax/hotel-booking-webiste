@@ -1,5 +1,12 @@
 import { ConflictException, Injectable } from '@nestjs/common';
-import { Auth_Otp_Token_Subject, loginDto, registerDto } from './auth.types';
+import {
+  Auth_Otp_Token_Subject,
+  forgotPasswordDto,
+  loginDto,
+  registerDto,
+  resetPasswordDto,
+  verifyEmailDto,
+} from './auth.types';
 import { PrismaService } from 'src/services/prisma/prisma.service';
 import { bad, mustHave } from 'src/utils/error';
 import * as argon2 from 'argon2';
@@ -7,6 +14,9 @@ import { AuthOtpTokenService } from 'src/services/auth-otp-token/auth-otp-token.
 import { addMinutes } from 'date-fns';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Verification_Mail } from 'src/services/event/event.type';
+import { JwtService } from '@nestjs/jwt';
+import { generateOtp } from 'src/utils/generateOtp';
+import { AuthOtpTokenType } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
@@ -14,6 +24,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly authOtpTokenService: AuthOtpTokenService,
     private eventEmitter: EventEmitter2,
+    private jwtService: JwtService,
   ) {}
   // check if user already exist before registering them
   async register(dto: registerDto) {
@@ -62,11 +73,9 @@ export class AuthService {
   }
 
   // login in user
-
   async login(dto: loginDto) {
     const { email, password } = dto;
     // check if user exist in the database
-
     const user = await this.prisma.user.findUnique({
       where: {
         email,
@@ -79,9 +88,9 @@ export class AuthService {
       },
     });
     mustHave(user, 'invalid credentials', 401);
-    if (!user.auth){
-      bad('password is required')
-     return};
+    if (!user.auth) {
+      bad('password is required');
+    }
     if (!user.isVerified) {
       // send another code to their mail again
       return { isVerified: false };
@@ -89,9 +98,144 @@ export class AuthService {
     // check if the password match
     const hashedPassword = user.auth.password;
     const matched = await argon2.verify(hashedPassword, password);
-    if(!matched) bad("invalid credential")
+    if (!matched) bad('invalid credential');
 
     // jwt token
-    
-}
+    const payload = { sub: user.id, role: user.role };
+    const token = await this.jwtService.signAsync(payload);
+    return {
+      token: token,
+      user: user.role,
+    };
+  }
+
+  // verify the email
+  async verifyEmail(dto: verifyEmailDto) {
+    // check if the email exist
+    const otp = await this.authOtpTokenService.findCode(dto.code);
+    if (!otp) bad('invalid token');
+
+    // verify the code
+    const isVerified = await this.authOtpTokenService.verityOtp(
+      {
+        code: otp.code,
+        subject: Auth_Otp_Token_Subject.Verify_Email,
+      },
+      false,
+    );
+    if (!isVerified) bad('otp verification failed');
+    // update the user
+
+    const user = await this.prisma.user.update({
+      where: {
+        email: otp.email,
+      },
+      data: {
+        isVerified: true,
+      },
+    });
+    await this.authOtpTokenService.deleteOtp(otp.code);
+    return {
+      message: 'email verified successfully ',
+    };
+  }
+
+  // forget password oooo
+  async forgotPassword(dto: forgotPasswordDto) {
+    const { email } = dto;
+    // find if the email exist
+    const emailExist = await this.prisma.user.findUnique({
+      where: {
+        email,
+      },
+    });
+    if (!emailExist) bad('invalid credentials');
+    //  create token  to send
+    const otpCode = await this.authOtpTokenService.create({
+      userId: emailExist.id,
+      type: AuthOtpTokenType.TOKEN,
+      subject: 'forgot password',
+      email: email,
+      expiry: addMinutes(new Date(), 10),
+    });
+    const year = new Date().getFullYear();
+    // listen to an event emitter
+    const link = `${process.env.CLIENT_URL}/reset-password/${otpCode.code}`;
+    await this.eventEmitter.emit(
+      'verification_mail',
+      new Verification_Mail(email,link, emailExist.name, year),
+    );
+  }
+
+  // resend link
+  async resendVerficationLink(dto: forgotPasswordDto) {
+    const { email } = dto;
+    const emailExist = await this.prisma.user.findUnique({
+      where: {
+        email,
+      },
+    });
+    if (!emailExist) bad('invalid credentials');
+    if (emailExist.isVerified) bad('account already verified');
+
+    await this.prisma.authOtpToken.deleteMany({
+      where: {
+        userId: emailExist.id,
+      },
+    });
+    const otpCode = await this.authOtpTokenService.create({
+      userId: emailExist.id,
+      type: AuthOtpTokenType.OTP,
+      subject: Auth_Otp_Token_Subject.Verify_Email,
+      email: email,
+      expiry: addMinutes(new Date(), 10),
+    });
+    // listen to an event emitter
+    const year = new Date().getFullYear();
+    await this.eventEmitter.emit(
+      'verification_mail',
+      new Verification_Mail(email, otpCode.code, emailExist.name, year),
+    );
+  }
+
+
+
+  
+  // reset password
+  async resetPassword(dto: resetPasswordDto) {
+    const { code, password, email } = dto;
+
+    // find and verify the token
+    const token = await this.authOtpTokenService.findCode(code);
+
+    if (!token) bad('invalid token');
+
+    const tokenIsValid = await this.authOtpTokenService.verityOtp(
+      {
+        code: token.code,
+        subject: Auth_Otp_Token_Subject.RESET_PASSWORD,
+      },
+      false,
+    );
+    if (!tokenIsValid) bad('invalid token');
+
+    const updateUserPassword = await this.prisma.user.update({
+      where: {
+        email: token.email,
+      },
+      data: {
+        // password:await argon2.hash(password)
+        auth: {
+          update: {
+            password: await argon2.hash(password),
+          },
+        },
+      },
+    });
+    // delete the token
+    await this.authOtpTokenService.deleteOtp(token.id);
+    return {
+      message: 'password reset successful',
+    };
+  }
 }
