@@ -31,6 +31,8 @@ model User {
   updatedAt   DateTime       @default(now())
   auth        Auth?
   token       AuthOtpToken[]
+  hotel       Hotel[]
+  upload      Upload[]
 }
 
 model Auth {
@@ -46,24 +48,62 @@ enum AuthOtpTokenType {
 }
 
 model AuthOtpToken {
-  id       String           @id @default(uuid())
-  subject  String
-  type     AuthOtpTokenType @default(OTP)
-  code     String @unique
-  expiry   DateTime
-  email    String
-  user     User?            @relation(fields: [userId], references: [id])
-  userId   String?
-  hotel   Hotel?          @relation(fields: [hotelId], references: [id])
-  hotelId String?
+  id      String           @id @default(uuid())
+  subject String
+  type    AuthOtpTokenType @default(OTP)
+  code    String           @unique
+  expiry  DateTime
+  email   String
+  user    User?            @relation(fields: [userId], references: [id])
+  userId  String?
 
   @@index([code])
   @@index([email])
 }
 
 model Hotel {
-  id    String         @id @default(uuid())
-  name  String
-  email String
-  token AuthOtpToken[]
+  id           String      @id @default(uuid())
+  name         String
+  email        String
+  contactPhone String
+  description  String
+  address      String
+  amenities    String[]
+  features     String[]
+  user         User        @relation(fields: [userId], references: [id])
+  userId       String
+  attachment   Attachments @relation(fields: [attachmentId], references: [id])
+  attachmentId String
+  account      Account?
+
+  @@index([name])
+}
+
+model Account {
+  id           String @id @default(uuid())
+  bankName     String
+  accountName  String
+  accoutNumber String
+  hotel        Hotel  @relation(fields: [hotelId], references: [id])
+  hotelId      String @unique
+}
+
+model Upload {
+  id          String        @id @default(uuid())
+  name        String
+  type        String
+  size        Int
+  data        Bytes
+  order       Int
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @default(now())
+  attachments Attachments[]
+  user        User          @relation(fields: [userId], references: [id])
+  userId      String
+}
+
+model Attachments {
+  id     String   @id @default(uuid())
+  uploads Upload[]
+  hotel  Hotel[]
 }

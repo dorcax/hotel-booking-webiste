@@ -1,5 +1,6 @@
 
 import{IsEmail, IsString} from "class-validator"
+import { Role } from "generated/prisma"
 
 export const Auth_Otp_Token_Subject ={
     Verify_Email:"verify email",
@@ -53,3 +54,8 @@ export class forgotPasswordDto{
     email:string
 }
 
+
+export class userEntity{
+    id:string
+    role:Role
+}

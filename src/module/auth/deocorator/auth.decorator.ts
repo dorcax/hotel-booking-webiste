@@ -22,7 +22,9 @@ export const Auth = (roles?: Role[]) => {
 
 export const AuthUser=createParamDecorator((data:unknown,ctx:ExecutionContext)=>{
     const request =ctx.switchToHttp().getRequest()
-    return request.user
+    const user =request.user
+    // return data ? user?.[data]:user
+    return user
 
 })
     
