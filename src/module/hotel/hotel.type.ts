@@ -23,6 +23,17 @@ export class createHotelDto{
     @IsArray()
     features:string[]
     
+     @IsString()
+    rule:string
+    
     @IsArray()
     attachments:string[]
 }
+
+
+// set = replace everything (wipes old and keeps only what you pass).
+
+// connect = only adds new relations, leaves old ones untouched.
+
+// disconnect = removes specific ones.
+export class updateHotelDto extends createHotelDto{}

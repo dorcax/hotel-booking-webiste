@@ -72,9 +72,11 @@ model Hotel {
   features     String[]
   user         User        @relation(fields: [userId], references: [id])
   userId       String
-  attachment   Attachments @relation(fields: [attachmentId], references: [id])
+  attachment   Attachments @relation(fields: [attachmentId], references: [id],onDelete:Cascade)
   attachmentId String
   account      Account?
+  rule         Upload? @relation(fields: [ruleId],references: [id],onDelete: Cascade)
+  ruleId       String?
 
   @@index([name])
 }
@@ -100,6 +102,7 @@ model Upload {
   attachments Attachments[]
   user        User          @relation(fields: [userId], references: [id])
   userId      String
+  hotel        Hotel[]
 }
 
 model Attachments {
