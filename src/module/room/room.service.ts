@@ -33,6 +33,34 @@ export class RoomService {
 
     return {message:"room created successfully"}
   }
+   
+
+   // find  hotels associated with user
+  async getHotels(hotelId:string) {
+    const rooms = await this.prisma.room.findMany({
+      where: {
+        hotelId,
+      },
+    });
+    if (!rooms.length) bad('no rooms found  ');
+
+    return rooms;
+  }
+
+  // find each hotel
+  async getHotel( hotelId: string) {
+    const room = await this.prisma.room.findFirst({
+      where: {
+        
+        hotelId:hotelId
+      },
+    });
+    if (!room) bad('no room found for this user ');
+
+    return room;
+  }
+
+
 
 //   update room 
 async  updateRoom(dto:updateRoomDto,roomId:string){
