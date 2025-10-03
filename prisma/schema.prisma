@@ -52,17 +52,20 @@ model AuthOtpToken {
   subject String
   type    AuthOtpTokenType @default(OTP)
   code    String           @unique
+
   expiry  DateTime
   email   String
-  user    User?            @relation(fields: [userId], references: [id])
+  user    User?    @relation(fields: [userId], references: [id])
   userId  String?
+  hotel   Hotel?   @relation(fields: [hotelId], references: [id])
+  hotelId String?
 
   @@index([code])
   @@index([email])
 }
 
 model Hotel {
-  id           String      @id @default(uuid())
+  id           String         @id @default(uuid())
   name         String
   email        String
   contactPhone String
@@ -70,15 +73,38 @@ model Hotel {
   address      String
   amenities    String[]
   features     String[]
-  user         User        @relation(fields: [userId], references: [id])
+  user         User           @relation(fields: [userId], references: [id])
   userId       String
-  attachment   Attachments @relation(fields: [attachmentId], references: [id],onDelete:Cascade)
+  attachment   Attachments    @relation(fields: [attachmentId], references: [id], onDelete: Cascade)
   attachmentId String
   account      Account?
-  rule         Upload? @relation(fields: [ruleId],references: [id],onDelete: Cascade)
+  rule         Upload?        @relation(fields: [ruleId], references: [id], onDelete: Cascade)
   ruleId       String?
+  authOtpToken AuthOtpToken[]
+  rooms        Room[]
 
   @@index([name])
+}
+
+enum RoomCategory {
+  DELUXE
+  STANDARD
+  SINGLE
+  SUITE
+}
+
+model Room {
+  id          String       @id @default(uuid())
+  category    RoomCategory @default(SINGLE)
+  description String
+  price       Float
+  number      String
+  hotel       Hotel       @relation(fields: [hotelId], references: [id])
+  hotelId     String
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @default(now())
+  attachment  Attachments  @relation(fields: [attachmentId],references: [id], onDelete:Cascade)
+  attachmentId String
 }
 
 model Account {
@@ -102,11 +128,12 @@ model Upload {
   attachments Attachments[]
   user        User          @relation(fields: [userId], references: [id])
   userId      String
-  hotel        Hotel[]
+  hotel       Hotel[]
 }
 
 model Attachments {
-  id     String   @id @default(uuid())
+  id      String   @id @default(uuid())
   uploads Upload[]
-  hotel  Hotel[]
+  hotel   Hotel[]
+  rooms   Room[]
 }

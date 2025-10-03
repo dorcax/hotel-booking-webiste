@@ -36,7 +36,7 @@ export class HotelService {
   }
 
   // find  hotels associated with user
-  async gethotels(user: userEntity) {
+  async getHotels(user: userEntity) {
     const hotels = await this.prisma.hotel.findMany({
       where: {
         userId: user.id,
@@ -48,7 +48,7 @@ export class HotelService {
   }
 
   // find each hotel
-  async gethotel(user: userEntity, hotelId: string) {
+  async getHotel(user: userEntity, hotelId: string) {
     const hotel = await this.prisma.hotel.findUnique({
       where: {
         id: hotelId,

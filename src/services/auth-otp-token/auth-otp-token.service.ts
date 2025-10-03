@@ -7,6 +7,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { VerificationDto } from '../mail/mail.types';
 import { bad } from 'src/utils/error';
 import { isAfter } from 'date-fns';
+import { connect } from 'http2';
 
 @Injectable()
 export class AuthOtpTokenService {
@@ -35,7 +36,7 @@ export class AuthOtpTokenService {
         hotelId,
         code,
       },
-    });
+    })
     return otp;
   }
 
