@@ -99,12 +99,12 @@ async  updateRoom(dto:updateRoomDto,roomId:string){
 
 }
 
-  async deleteRoom(roomId: string, user: userEntity) {
-    const room = await this.prisma.hotel.findUnique({
+async deleteRoom(roomId: string) {
+    const room = await this.prisma.room.findUnique({
       where: { id: roomId },
     });
 
-    if (!room || room.userId !== user.id) {
+    if (!room) {
       bad('room not found ');
     }
 
