@@ -1,7 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/services/prisma/prisma.service';
 import { createRoomDto, listRoomQuery, updateRoomDto } from './room.type';
-import { connectId, createAttachments, updateAttachments } from 'prisma/prisma.util';
+import {
+  connectId,
+  createAttachments,
+  updateAttachments,
+} from 'prisma/prisma.util';
 import { userEntity } from '../auth/auth.types';
 import { bad } from 'src/utils/error';
 import { searchQuery } from 'src/utils/filter';
@@ -19,13 +23,12 @@ export class RoomService {
       where: { id: hotelId },
     });
 
-
     if (!room) {
       throw new Error('Hotel not found');
     }
     // create the room
 
-     await this.prisma.room.create({
+    await this.prisma.room.create({
       data: {
         ...rest,
         hotel: connectId(hotelId),
@@ -33,26 +36,34 @@ export class RoomService {
       },
     });
 
-    return {message:"room created successfully"}
-  }
-   
-  // room search and pagination 
-
-  async list (query:listRoomQuery){ 
-    let where:Prisma.RoomWhereInput ={}
-    const search =searchQuery(query.search)
-    const take =+query.count || 10
-    const page =query.page ||1 
-    const skip =take*(page -1) 
-    const order ={createdAt :"desc"} as const  
-    where.hotelId =query.hotelId
-
-        
-
+    return { message: 'room created successfully' };
   }
 
-   // find  hotels associated with user
-  async getHotels(hotelId:string) {
+  // room search and pagination
+
+  async list(query: listRoomQuery) {
+    let where: Prisma.RoomWhereInput = {};
+    const search = searchQuery(query.search);
+    const take = +query.count || 10;
+    const page = query.page || 1;
+    const skip = take * (page - 1);
+    const order = { createdAt: 'desc' } as const;
+    where.hotelId = query.hotelId;
+
+    // search for room
+    const list = await Promise.all([
+      this.prisma.room.findMany({
+        where: {
+          ...where,
+          fullText: search ? { search } : undefined,
+        },
+      }),
+    ]);
+    return list;
+  }
+
+  // find  hotels associated with user
+  async getHotels(hotelId: string) {
     const rooms = await this.prisma.room.findMany({
       where: {
         hotelId,
@@ -64,11 +75,10 @@ export class RoomService {
   }
 
   // find each hotel
-  async getHotel( hotelId: string) {
+  async getHotel(hotelId: string) {
     const room = await this.prisma.room.findFirst({
       where: {
-        
-        hotelId:hotelId
+        hotelId: hotelId,
       },
     });
     if (!room) bad('no room found for this user ');
@@ -76,12 +86,10 @@ export class RoomService {
     return room;
   }
 
-
-
-//   update room 
-async  updateRoom(dto:updateRoomDto,roomId:string){
-    const {attachments,...rest} =dto
-     // check if room exists
+  //   update room
+  async updateRoom(dto: updateRoomDto, roomId: string) {
+    const { attachments, ...rest } = dto;
+    // check if room exists
     const room = await this.prisma.room.findUnique({
       where: { id: roomId },
     });
@@ -90,32 +98,32 @@ async  updateRoom(dto:updateRoomDto,roomId:string){
       throw new Error('Hotel not found');
     }
 
-    await this.prisma.$transaction(async(tx)=>{
+    await this.prisma.$transaction(async (tx) => {
       await tx.room.update({
-        where:{
-            id:roomId
+        where: {
+          id: roomId,
         },
-        data:{
-            ...rest,
-            attachment:attachments.length ? updateAttachments(attachments):undefined
-        }
-    })
+        data: {
+          ...rest,
+          attachment: attachments.length
+            ? updateAttachments(attachments)
+            : undefined,
+        },
+      });
 
-    if(attachments.length){
+      if (attachments.length) {
         await this.prisma.upload.deleteMany({
-            where:{
-                id:{notIn:attachments},
-                attachments:{some:{id:room.attachmentId}}
-            }
-        })
-    }
-    })
-   return {message:"room updated successfully"}
-  
+          where: {
+            id: { notIn: attachments },
+            attachments: { some: { id: room.attachmentId } },
+          },
+        });
+      }
+    });
+    return { message: 'room updated successfully' };
+  }
 
-}
-
-async deleteRoom(roomId: string) {
+  async deleteRoom(roomId: string) {
     const room = await this.prisma.room.findUnique({
       where: { id: roomId },
     });
