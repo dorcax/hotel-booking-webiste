@@ -1,5 +1,11 @@
 import { RoomCategory } from '@prisma/client';
-import { IsArray, IsEnum, IsNumber, IsString } from 'class-validator';
+import { IsArray, IsEnum, IsNumber, IsString, IsUUID } from 'class-validator';
+import { PaginationqueryDto } from 'src/utils/paginationQuery.type';
+
+export class listRoomQuery extends PaginationqueryDto{
+  @IsUUID("4")
+  hotelId:string
+}
 
 export class createRoomDto {
   @IsString()

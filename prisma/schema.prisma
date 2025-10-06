@@ -84,6 +84,8 @@ model Hotel {
   authOtpToken AuthOtpToken[]
   rooms        Room[]
 
+  fullText    String @default("")
+
   @@index([name])
 }
 
@@ -105,7 +107,8 @@ model Room {
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @default(now())
   attachment  Attachments  @relation(fields: [attachmentId],references: [id], onDelete:Cascade)
-  attachmentId String
+  attachmentId String 
+  fullText    String @default("")
 }
 
 model Account {

@@ -1,9 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/services/prisma/prisma.service';
-import { createRoomDto, updateRoomDto } from './room.type';
+import { createRoomDto, listRoomQuery, updateRoomDto } from './room.type';
 import { connectId, createAttachments, updateAttachments } from 'prisma/prisma.util';
 import { userEntity } from '../auth/auth.types';
 import { bad } from 'src/utils/error';
+import { searchQuery } from 'src/utils/filter';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class RoomService {
@@ -34,6 +36,20 @@ export class RoomService {
     return {message:"room created successfully"}
   }
    
+  // room search and pagination 
+
+  async list (query:listRoomQuery){ 
+    let where:Prisma.RoomWhereInput ={}
+    const search =searchQuery(query.search)
+    const take =+query.count || 10
+    const page =query.page ||1 
+    const skip =take*(page -1) 
+    const order ={createdAt :"desc"} as const  
+    where.hotelId =query.hotelId
+
+        
+
+  }
 
    // find  hotels associated with user
   async getHotels(hotelId:string) {
