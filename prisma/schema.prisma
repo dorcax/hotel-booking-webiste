@@ -5,9 +5,9 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
   // output   = "../generated/prisma"
-   previewFeatures = ["fullTextSearchPostgres"]
+  previewFeatures = ["fullTextSearchPostgres"]
 }
 
 datasource db {
@@ -34,6 +34,7 @@ model User {
   token       AuthOtpToken[]
   hotel       Hotel[]
   upload      Upload[]
+  Reservations Reservation[]
 }
 
 model Auth {
@@ -83,8 +84,9 @@ model Hotel {
   ruleId       String?
   authOtpToken AuthOtpToken[]
   rooms        Room[]
+  reservations   Reservation[]
 
-  fullText    String @default("")
+  fullText String @default("")
 
   @@index([name])
 }
@@ -97,18 +99,20 @@ enum RoomCategory {
 }
 
 model Room {
-  id          String       @id @default(uuid())
-  category    RoomCategory @default(SINGLE)
-  description String
-  price       Float
-  number      String
-  hotel       Hotel       @relation(fields: [hotelId], references: [id])
-  hotelId     String
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @default(now())
-  attachment  Attachments  @relation(fields: [attachmentId],references: [id], onDelete:Cascade)
-  attachmentId String 
-  fullText    String @default("")
+  id           String       @id @default(uuid())
+  category     RoomCategory @default(SINGLE)
+  description  String
+  isAvailable  Boolean      @default(true)
+  price        Float
+  number       String
+  hotel        Hotel        @relation(fields: [hotelId], references: [id])
+  hotelId      String
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @default(now())
+  attachment   Attachments  @relation(fields: [attachmentId], references: [id], onDelete: Cascade)
+  attachmentId String
+  reservations  Reservation[]
+  fullText     String       @default("")
 }
 
 model Account {
@@ -117,7 +121,8 @@ model Account {
   accountName  String
   accoutNumber String
   hotel        Hotel  @relation(fields: [hotelId], references: [id])
-  hotelId      String @unique
+  hotelId      String @unique 
+  
 }
 
 model Upload {
@@ -140,4 +145,25 @@ model Attachments {
   uploads Upload[]
   hotel   Hotel[]
   rooms   Room[]
+}
+
+enum BookingStatus {
+  PENDING
+  COMPLETED 
+  CONFIRMED 
+  CANCELLED
+
+}
+
+model Reservation {
+  id       String   @id @default(uuid())
+  checkIn  DateTime
+  checkOut DateTime
+  status   BookingStatus   @default(PENDING)
+  user     User  @relation(fields: [userId] ,references: [id])
+  userId   String
+  hotel    Hotel @relation(fields: [hotelId] ,references: [id])
+  hotelId  String
+  room    Room  @relation(fields: [roomId],references: [id])
+  roomId String
 }

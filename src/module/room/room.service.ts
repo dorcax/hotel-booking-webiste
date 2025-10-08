@@ -8,7 +8,7 @@ import {
 } from 'prisma/prisma.util';
 import { userEntity } from '../auth/auth.types';
 import { bad } from 'src/utils/error';
-import { searchQuery } from 'src/utils/filter';
+import { makeFullText, searchQuery } from 'src/utils/filter';
 import { Prisma } from '@prisma/client';
 
 @Injectable()
@@ -27,10 +27,11 @@ export class RoomService {
       throw new Error('Hotel not found');
     }
     // create the room
-
+    const fullText = makeFullText(rest, 'description', 'name');
     await this.prisma.room.create({
       data: {
         ...rest,
+        fullText,
         hotel: connectId(hotelId),
         attachment: createAttachments(attachments),
       },
@@ -43,31 +44,53 @@ export class RoomService {
 
   async list(query: listRoomQuery) {
     let where: Prisma.RoomWhereInput = {};
-    const search = searchQuery(query.search);
-    const take = +query.count || 10;
+    if (query.search) {
+      where.fullText = { search: query.search };
+    }
+
+    if (query.hotelId) {
+      where.hotelId = { equals: query.hotelId };
+    }
+    const take = query.count || 10;
     const page = query.page || 1;
     const skip = take * (page - 1);
-    const order = { createdAt: 'desc' } as const;
-    where.hotelId = query.hotelId;
 
-    // search for room
-    const list = await Promise.all([
+    const [rooms, totalCount] = await Promise.all([
       this.prisma.room.findMany({
-        where: {
-          ...where,
-          fullText: search ? { search } : undefined,
+        where,
+        skip,
+        take,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          attachment: true,
         },
       }),
+      this.prisma.room.count({ where }),
     ]);
-    return list;
+    return {
+      data: rooms,
+      totalCount,
+      totalPage: Math.ceil(totalCount / take),
+    };
   }
 
-  // find  hotels associated with user
-  async getHotels(hotelId: string) {
-    const rooms = await this.prisma.room.findMany({
+  async findHotelByUser(hotelId: string, user: userEntity) {
+    const hotel = await this.prisma.hotel.findFirst({
       where: {
-        hotelId,
+        id: hotelId,
+        userId: user.id,
       },
+    });
+    return hotel;
+  }
+  // find  hotels associated with user
+  async getRooms(hotelId: string, user: userEntity) {
+    //  find if the hotel exist
+    const hotel = await this.findHotelByUser(hotelId,user)
+    if (!hotel) bad('hotel not found ')
+
+    const rooms = await this.prisma.room.findMany({
+      where: { hotelId: hotel.id },
     });
     if (!rooms.length) bad('no rooms found  ');
 
@@ -75,10 +98,12 @@ export class RoomService {
   }
 
   // find each hotel
-  async getHotel(hotelId: string) {
+  async getRoom(hotelId: string, roomId: string, user: userEntity) {
+    const hotel = await this.findHotelByUser(hotelId,user)
+    if (!hotel) bad('hotel not found ');
     const room = await this.prisma.room.findFirst({
       where: {
-        hotelId: hotelId,
+        id: roomId,
       },
     });
     if (!room) bad('no room found for this user ');
@@ -97,7 +122,7 @@ export class RoomService {
     if (!room) {
       throw new Error('Hotel not found');
     }
-
+    const fullText = makeFullText({ ...room, ...rest }, 'description', 'name');
     await this.prisma.$transaction(async (tx) => {
       await tx.room.update({
         where: {
