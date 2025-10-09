@@ -6,9 +6,10 @@ import { AuthOtpTokenModule } from './services/auth-otp-token/auth-otp-token.mod
 import { EventModule } from './services/event/event.module';
 import { MailModule } from './services/mail/mail.module';
 import { AuthModule } from './module/auth/auth.module';
+import { FlutterwaveModule } from './services/flutterwave/flutterwave.module';
 
 @Module({
-  imports: [PrismaModule, AuthOtpTokenModule,AuthModule, EventModule, MailModule],
+  imports: [PrismaModule, AuthOtpTokenModule,AuthModule, EventModule, MailModule, FlutterwaveModule],
   controllers: [AppController],
   providers: [AppService],
 })

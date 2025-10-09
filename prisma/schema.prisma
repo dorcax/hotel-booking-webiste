@@ -21,20 +21,21 @@ enum Role {
 }
 
 model User {
-  id          String         @id @default(uuid())
-  email       String         @unique
-  isVerified  Boolean        @default(false)
-  role        Role           @default(USER)
-  phoneNumber String         @unique
-  name        String
-  gender      String
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @default(now())
-  auth        Auth?
-  token       AuthOtpToken[]
-  hotel       Hotel[]
-  upload      Upload[]
+  id           String         @id @default(uuid())
+  email        String         @unique
+  isVerified   Boolean        @default(false)
+  role         Role           @default(USER)
+  phoneNumber  String         @unique
+  name         String
+  gender       String
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @default(now())
+  auth         Auth?
+  token        AuthOtpToken[]
+  hotel        Hotel[]
+  upload       Upload[]
   Reservations Reservation[]
+  transactions Transaction[]
 }
 
 model Auth {
@@ -84,7 +85,7 @@ model Hotel {
   ruleId       String?
   authOtpToken AuthOtpToken[]
   rooms        Room[]
-  reservations   Reservation[]
+  reservations Reservation[]
 
   fullText String @default("")
 
@@ -99,20 +100,21 @@ enum RoomCategory {
 }
 
 model Room {
-  id           String       @id @default(uuid())
-  category     RoomCategory @default(SINGLE)
+  id           String        @id @default(uuid())
+  category     RoomCategory  @default(SINGLE)
   description  String
-  isAvailable  Boolean      @default(true)
+  isAvailable  Boolean       @default(true)
   price        Float
   number       String
-  hotel        Hotel        @relation(fields: [hotelId], references: [id])
+  hotel        Hotel         @relation(fields: [hotelId], references: [id])
   hotelId      String
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @default(now())
-  attachment   Attachments  @relation(fields: [attachmentId], references: [id], onDelete: Cascade)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @default(now())
+  attachment   Attachments   @relation(fields: [attachmentId], references: [id], onDelete: Cascade)
   attachmentId String
-  reservations  Reservation[]
-  fullText     String       @default("")
+  reservations Reservation[]
+  fullText     String        @default("")
+  transactions Transaction[]
 }
 
 model Account {
@@ -121,8 +123,7 @@ model Account {
   accountName  String
   accoutNumber String
   hotel        Hotel  @relation(fields: [hotelId], references: [id])
-  hotelId      String @unique 
-  
+  hotelId      String @unique
 }
 
 model Upload {
@@ -149,21 +150,36 @@ model Attachments {
 
 enum BookingStatus {
   PENDING
-  COMPLETED 
-  CONFIRMED 
+  COMPLETED
+  CONFIRMED
   CANCELLED
-
 }
 
 model Reservation {
-  id       String   @id @default(uuid())
+  id       String        @id @default(uuid())
   checkIn  DateTime
   checkOut DateTime
-  status   BookingStatus   @default(PENDING)
-  user     User  @relation(fields: [userId] ,references: [id])
+  status   BookingStatus @default(PENDING)
+  user     User          @relation(fields: [userId], references: [id])
   userId   String
-  hotel    Hotel @relation(fields: [hotelId] ,references: [id])
+  hotel    Hotel         @relation(fields: [hotelId], references: [id])
   hotelId  String
-  room    Room  @relation(fields: [roomId],references: [id])
-  roomId String
+  room     Room          @relation(fields: [roomId], references: [id])
+  roomId   String
+}
+
+model Transaction {
+  id           String   @id @default(uuid())
+  amount       String
+  txref        String
+  currency     String
+  redirect_url String
+  flwRef       String
+  paymentType  String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id])
+  userId       String
+  room         Room     @relation(fields: [roomId], references: [id])
+  roomId       String
 }

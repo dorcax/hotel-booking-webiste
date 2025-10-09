@@ -35,7 +35,10 @@ export class ReservationService {
         where:{
             roomId,
             AND:[{checkIn:{lte:checkOut}},{checkOut:{gte:checkIn}}],
-            status:{in:["CONFIRMED","COMPLETED"]}
+            status:{in:["CONFIRMED","COMPLETED"]},
+            room:{
+              isAvailable:false
+            }
         }
     })
     if(roomIsAvailable) bad("Room already booked for these dates")
