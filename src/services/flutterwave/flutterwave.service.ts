@@ -1,12 +1,72 @@
 import { Injectable } from '@nestjs/common';
-import { CreateFlutterwaveDto } from './dto/create-flutterwave.dto';
+import { CreateFlutterwaveDto, FLUTTERWAVE_INITIATE_PAYMENT } from './dto/create-flutterwave.dto';
 import { UpdateFlutterwaveDto } from './dto/update-flutterwave.dto';
+import { HttpService } from '@nestjs/axios';
+import { PrismaService } from '../prisma/prisma.service';
+import { generateTransactionRef } from 'src/utils/ref.util';
+import { connectId } from 'prisma/prisma.util';
+import { userEntity } from 'src/module/auth/auth.types';
 
 @Injectable()
 export class FlutterwaveService {
-  create(createFlutterwaveDto: CreateFlutterwaveDto) {
-    return 'This action adds a new flutterwave';
+  constructor(private readonly httpServices:HttpService,
+    private readonly prisma:PrismaService
+  ){}
+  async initiatePayment(createFlutterwaveDto: CreateFlutterwaveDto,user:userEntity) {
+    const{roomId,amount,currency,reservationId}=createFlutterwaveDto
+     const txRef =await generateTransactionRef()
+
+    // create a transaction table to show record 
+    const transaction = await this.prisma.transaction.create({
+      data:{
+        amount,
+        currency,
+        txRef,
+        user:connectId(user.id),
+        redirectUrl:'http://localhost:3000/payment/success',
+        room:connectId(roomId),
+        reservation:connectId(reservationId)
+      }
+      })
+      // call flutter wave 
+       
+       const response =await this.httpServices.axiosRef.post(
+        FLUTTERWAVE_INITIATE_PAYMENT,
+        {
+          txRef,
+          amount,
+          currency,
+          redirectUrl:'http://localhost:3000/payment/success',
+          customer:{
+            name:user.email
+          },
+          customizations: {
+				title: 'Flutterwave Standard Payment',
+			}},{
+        headers:{
+          Authorization:`Bearer ${process.env.SECRET_KEY}`,
+          'Content-Type': 'application/json',
+
+        }
+      }
+        
+      )
+
+  const paymentData =response.data.data
+  await this.prisma.transaction.update({
+    where:{
+      id:transaction.id
+    },
+    data:{
+      flwRef:paymentData.flw_ref
+    }
+  })
+   return {
+      message: 'Payment initiated successfully',
+      payment_link: paymentData.link, 
+    };
   }
+  
 
   findAll() {
     return `This action returns all flutterwave`;

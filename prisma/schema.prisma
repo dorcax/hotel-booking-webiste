@@ -83,7 +83,7 @@ model Hotel {
   account      Account?
   rule         Upload?        @relation(fields: [ruleId], references: [id], onDelete: Cascade)
   ruleId       String?
-  authOtpToken AuthOtpToken[]
+  authOtpTokens AuthOtpToken[]
   rooms        Room[]
   reservations Reservation[]
 
@@ -121,7 +121,7 @@ model Account {
   id           String @id @default(uuid())
   bankName     String
   accountName  String
-  accoutNumber String
+  accountNumber String
   hotel        Hotel  @relation(fields: [hotelId], references: [id])
   hotelId      String @unique
 }
@@ -138,13 +138,13 @@ model Upload {
   attachments Attachments[]
   user        User          @relation(fields: [userId], references: [id])
   userId      String
-  hotel       Hotel[]
+  hotels       Hotel[]
 }
 
 model Attachments {
   id      String   @id @default(uuid())
   uploads Upload[]
-  hotel   Hotel[]
+  hotels   Hotel[]
   rooms   Room[]
 }
 
@@ -166,20 +166,36 @@ model Reservation {
   hotelId  String
   room     Room          @relation(fields: [roomId], references: [id])
   roomId   String
+  transactions Transaction[]
+}
+
+enum PaymentType {
+  CARD
+  BANKTRANSFER
+}
+
+enum TransactionStatus {
+  CANCELLED
+  SUCCESS
+  FAILED
+  PENDING
 }
 
 model Transaction {
-  id           String   @id @default(uuid())
-  amount       String
-  txref        String
-  currency     String
-  redirect_url String
-  flwRef       String
-  paymentType  String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @default(now())
-  user         User     @relation(fields: [userId], references: [id])
-  userId       String
-  room         Room     @relation(fields: [roomId], references: [id])
-  roomId       String
+  id                String            @id @default(uuid())
+  amount            String
+  txRef             String
+  currency          String
+  redirectUrl      String
+  flwRef            String?
+  paymentType       PaymentType       @default(BANKTRANSFER)
+  transactionStatus TransactionStatus @default(PENDING)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @default(now())
+  user              User              @relation(fields: [userId], references: [id])
+  userId            String
+  room              Room              @relation(fields: [roomId], references: [id])
+  roomId            String
+  reservation       Reservation?      @relation(fields: [reservationId],references: [id])
+  reservationId     String?
 }

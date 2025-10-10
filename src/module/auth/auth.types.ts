@@ -58,4 +58,5 @@ export class forgotPasswordDto{
 export class userEntity{
     id:string
     role:Role
+    email:string
 }
