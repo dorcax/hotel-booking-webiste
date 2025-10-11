@@ -24,48 +24,49 @@ export class WebhookService {
           txRef,
         },
         include: {
-          user:true,
+          user: true,
           reservation: true,
         },
       });
       if (!transaction) bad('transaction not found ');
-    //   check if the webhook have been processed before 
-    if(transaction.transactionStatus==="SUCCESS") bad("transaction already processed")
+      //   check if the webhook have been processed before
+      if (transaction.transactionStatus === 'SUCCESS')
+        bad('transaction already processed');
 
       // update the trasanction status
-      await this.prisma.$transaction(async(tx)=>{
-         await tx.transaction.update({
-        where: {
-          id: transaction.id,
-        },
-        data: {
-          transactionStatus: 'SUCCESS',
-        },
-      });
-      // update the room availability ,
-      await tx.room.update({
-        where: {
-          id: transaction.roomId,
-        },
-        data: {
-          isAvailable: false,
-        },
+      await this.prisma.$transaction(async (tx) => {
+        await tx.transaction.update({
+          where: {
+            id: transaction.id,
+          },
+          data: {
+            transactionStatus: 'SUCCESS',
+          },
+        });
+        // update the room availability ,
+        await tx.room.update({
+          where: {
+            id: transaction.roomId,
+          },
+          data: {
+            isAvailable: false,
+          },
+        });
+
+        // update the reservation status
+        await tx.reservation.update({
+          where: {
+            //   id: transaction.reservationId,
+            id: '123',
+            userId: transaction.userId,
+          },
+          data: {
+            status: 'CONFIRMED',
+          },
+        });
       });
 
-      // update the reservation status
-      await tx.reservation.update({
-        where: {
-          id: transaction.reservationId,
-          userId:transaction.userId
-        },
-        data: {
-          status: 'CONFIRMED',
-        },
-      });
-      })
-   
-
-      return ;
+      return;
     } catch (error) {
       console.error(' Webhook error:', error);
       return { message: 'Internal server error' };
