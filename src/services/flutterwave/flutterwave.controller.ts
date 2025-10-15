@@ -2,14 +2,16 @@ import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/commo
 import { FlutterwaveService } from './flutterwave.service';
 import { CreateFlutterwaveDto } from './dto/create-flutterwave.dto';
 import { UpdateFlutterwaveDto } from './dto/update-flutterwave.dto';
+import { AuthUser } from 'src/module/auth/deocorator/auth.decorator';
+import { userEntity } from 'src/module/auth/auth.types';
 
 @Controller('flutterwave')
 export class FlutterwaveController {
   constructor(private readonly flutterwaveService: FlutterwaveService) {}
 
   @Post()
-  create(@Body() createFlutterwaveDto: CreateFlutterwaveDto) {
-    return this.flutterwaveService.create(createFlutterwaveDto);
+  create(@Body() createFlutterwaveDto: CreateFlutterwaveDto,@AuthUser() user:userEntity ) {
+    return this.flutterwaveService.initiatePayment(createFlutterwaveDto,user);
   }
 
   @Get()

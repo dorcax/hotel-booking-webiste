@@ -4,6 +4,8 @@ import { AuthController } from './auth.controller';
 import { PrismaService } from 'src/services/prisma/prisma.service';
 import { AuthOtpTokenModule } from 'src/services/auth-otp-token/auth-otp-token.module';
 import { JwtModule } from '@nestjs/jwt';
+import { GoogleStrategy } from './strategies/GoogleStrategy';
+import { PassportModule } from '@nestjs/passport';
 
 @Module({
   imports:[AuthOtpTokenModule,JwtModule.register({
@@ -14,8 +16,9 @@ import { JwtModule } from '@nestjs/jwt';
     }
 
   }),
+    PassportModule.register({ defaultStrategy: 'google' })
 ],
   controllers: [AuthController],
-  providers: [AuthService,PrismaService],
+  providers: [AuthService,PrismaService,GoogleStrategy],
 })
 export class AuthModule {}

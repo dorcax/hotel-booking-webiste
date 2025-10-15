@@ -33,7 +33,7 @@ export class AuthService {
     const emailExist = await this.prisma.user.findUnique({
       where: { email },
     });
-    if (emailExist) bad('eamil already exist');
+    if (emailExist) bad('email already exist');
     // check if phonenumber exist
     const phoneExist = await this.prisma.user.findUnique({
       where: { phoneNumber },
