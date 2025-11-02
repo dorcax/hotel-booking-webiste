@@ -14,7 +14,7 @@ export class ReservationService {
     // verify if user exist 
     const existingUser = await this.prisma.user.findUnique({
       where: {
-        id: user.id,
+        id: user.sub,
       },
     });
 

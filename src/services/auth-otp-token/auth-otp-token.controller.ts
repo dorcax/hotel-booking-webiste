@@ -1,7 +1,8 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
 import { AuthOtpTokenService } from './auth-otp-token.service';
-import { CreateAuthOtpTokenDto } from './dto/create-auth-otp-token.dto';
+import { CreateAuthOtpTokenDto, VerifyOtp } from './dto/create-auth-otp-token.dto';
 import { UpdateAuthOtpTokenDto } from './dto/update-auth-otp-token.dto';
+import { verifyEmailDto } from 'src/module/auth/auth.types';
 
 @Controller('auth-otp-token')
 export class AuthOtpTokenController {
@@ -11,6 +12,8 @@ export class AuthOtpTokenController {
   create(@Body() createAuthOtpTokenDto: CreateAuthOtpTokenDto) {
     return this.authOtpTokenService.create(createAuthOtpTokenDto);
   }
+
+ 
 
   
  

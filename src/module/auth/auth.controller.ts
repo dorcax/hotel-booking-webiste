@@ -1,7 +1,8 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { loginDto, registerDto } from './auth.types';
+import { loginDto, registerDto, userEntity, verifyEmailDto } from './auth.types';
 import { GoogleAuthGuard } from './guard/GoogleAuthGuard';
+import { Auth, AuthUser } from './deocorator/auth.decorator';
 
 @Controller('auth')
 export class AuthController {
@@ -10,6 +11,7 @@ export class AuthController {
    createUser(@Body() dto:registerDto){
     
     return this.authService.register(dto)
+    
 
     }
 
@@ -18,6 +20,22 @@ export class AuthController {
       return this.authService.login(dto)
 
     }
+
+    @Post("verify-otp")
+    verifyOtp(@Body() dto:verifyEmailDto){
+     return this.authService.verifyEmail(dto)
+
+    }
+
+
+    
+    @Auth()
+    @Get()
+    async authUser(@AuthUser() user:userEntity){
+      return this.authService.authUser(user)
+
+    } 
+
 
     // google login 
     @Get("google/login")
@@ -30,8 +48,15 @@ export class AuthController {
 
     @Get("google/callback")
     @UseGuards(GoogleAuthGuard)
-    async redirect(){
-      return {message:"user redirect"}
+
+    async redirect(@Req() req,@Res() res){
+       const user = req.user; // contains user info + token
+
+  // Option 1: Redirect with token in query (for SPA frontends)
+  return res.redirect(`http://localhost:5173?token=${user.token}`);
+      // return {message:"user redirect"}
     }
 
+     
+    
 }

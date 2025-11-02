@@ -9,7 +9,9 @@ count:number
 
 @IsString()
 @IsOptional()
-search :string 
+search?:string 
+
+
 
 @IsNumber()
 @IsOptional()

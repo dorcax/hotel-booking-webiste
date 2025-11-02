@@ -8,19 +8,21 @@ import { userEntity } from '../auth/auth.types';
 export class UploadService {
     constructor(private readonly prisma :PrismaService){}
 
-async upload(id:string ,file:Express.Multer.File,order:number,user:userEntity){
+async uploadFile(file:Express.Multer.File,order:number,user:userEntity){
     const uploadResult:any = await handleUpload(file.buffer)
-    return await this.prisma.upload.create({
+    const data= await this.prisma.upload.create({
         data:{
            name:file.originalname,
            url:uploadResult.secure_url,
-           publicId:uploadResult.public_url,
+           publicId:uploadResult.public_id,
            type:file.mimetype,
            size:file.size,
            order,
-           user:connectId(user.id)
+           user:connectId(user.sub)
         }
     })
+    console.log("upload be",data)
+    return data
 
 }
 
@@ -56,7 +58,7 @@ async deleteUpload(ids:string[],user:userEntity){
         where:{
             id:{in:ids},
             user:{
-                id:user.id
+                id:user.sub
             }
         }
     }) 
@@ -67,12 +69,13 @@ async deleteUpload(ids:string[],user:userEntity){
         }
     }
 
+
     // delete in db 
-  return   await this.prisma.upload.deleteMany({
+  return await this.prisma.upload.deleteMany({
         where:{
             id:{in:ids},
             user:{
-                id:user.id
+                id:user.sub
             }
         }
     })

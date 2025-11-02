@@ -40,7 +40,7 @@ return joined.replace(/\b(\w+)/g,"x$1")
 }
 
 // search query 
-export function searchQuery(text: string) {
+export function searchQuery(text:string) {
   if (!text?.trim()) return '';
 
   return text

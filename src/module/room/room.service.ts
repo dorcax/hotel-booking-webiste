@@ -15,24 +15,26 @@ import { Prisma } from '@prisma/client';
 export class RoomService {
   constructor(private prisma: PrismaService) {}
 
-  async createRoom(dto: createRoomDto) {
-    const { attachments, hotelId, ...rest } = dto;
+  async createRoom(dto: createRoomDto, user) {
+    const { attachments, ...rest } = dto;
 
-    // check if hotel exists
-    const room = await this.prisma.hotel.findUnique({
-      where: { id: hotelId },
+    // find the hotel exist
+    const hotel = await this.prisma.hotel.findUnique({
+      where: {
+        userId: user.sub,
+      },
     });
 
-    if (!room) {
-      throw new Error('Hotel not found');
-    }
+    console.log("user",user)
+    if (!hotel) bad("hotel does not exist")
     // create the room
-    const fullText = makeFullText(rest, 'description', 'name');
+    const fullText = makeFullText(rest,{}, 'description', 'roomNumber',"category");
+    // const fullText = makeFullText(room, updates, 'roomNumber', 'description', 'category')
     await this.prisma.room.create({
       data: {
         ...rest,
         fullText,
-        hotel: connectId(hotelId),
+        hotel: connectId(hotel.id),
         attachment: createAttachments(attachments),
       },
     });
@@ -42,43 +44,115 @@ export class RoomService {
 
   // room search and pagination
 
-  async list(query: listRoomQuery) {
-    let where: Prisma.RoomWhereInput = {};
-    if (query.search) {
-      where.fullText = { search: query.search };
-    }
+  // async list(query: listRoomQuery) {
+  //   let where: Prisma.RoomWhereInput = {};
+  //   const searchList =query.search
+    
+  //   const search = searchQuery(searchList);
+  //   // if (query.search) {
+  //   //   where.fullText = { search: query.search };
+  //   // }
 
-    if (query.hotelId) {
-      where.hotelId = { equals: query.hotelId };
-    }
-    const take = query.count || 10;
+  //   // if (query.hotelId) {
+  //   //   where.hotelId = { equals: query.hotelId };
+  //   // }
+  //   const take = query.count || 10;
+  //   const page = query.page || 1;
+  //   const skip = take * (page - 1);
+
+  //   const [rooms, totalCount] = await Promise.all([
+  //     this.prisma.room.findMany({
+  //       where,
+  //       skip,
+  //       take,
+  //       fullText:search ?{search} :undefined,
+  //       orderBy: { createdAt: 'desc' },
+  //       include: {
+  //         attachment:{
+  //           select:{
+  //             uploads:true
+  //           }
+  //         }
+  //       },
+  //     }),
+  //     this.prisma.room.count({ where }),
+  //   ]);
+  //   return {
+  //     data: rooms,
+  //    pagination:{
+  //      totalCount,
+  //     totalPage: Math.ceil(totalCount / take),
+  //    }
+  //   };
+  // }
+    async list(query: listRoomQuery) {
+    let where: Prisma.RoomWhereInput = {};
+    const search = searchQuery(query.search ?? "");
+    const take = +query.count || 10;
     const page = query.page || 1;
     const skip = take * (page - 1);
+    const orderBy = { createdAt: 'desc' } as const;
+    where.hotelId = { equals: query.hotelId };
 
-    const [rooms, totalCount] = await Promise.all([
+    const [list, totalCount, activeCount, inactiveCount] = await Promise.all([
       this.prisma.room.findMany({
-        where,
+        where: {
+          ...where,
+          fullText: search ? { search } : undefined,
+        },
         skip,
         take,
-        orderBy: { createdAt: 'desc' },
-        include: {
-          attachment: true,
-        },
+        orderBy,
+        include:{
+          attachment:{
+            select:{
+              uploads:true
+            }
+          }
+        }
+      
       }),
       this.prisma.room.count({ where }),
+      this.prisma.room.count({
+        where: {
+          ...where,
+          isAvailable : true,
+          
+        },
+      }),
+      this.prisma.room.count({
+        where: {
+          ...where,
+          isAvailable: false,
+        },
+      }),
     ]);
-    return {
-      data: rooms,
+
+    const totalPages = take ? Math.ceil(totalCount / take) : 1;
+
+    const pagination = {
+      page,
       totalCount,
-      totalPage: Math.ceil(totalCount / take),
+      totalPages,
+      filterCounts: {
+        TOTAL: totalCount,
+        ACTIVE: activeCount,
+        INACTIVE: inactiveCount,
+      },
+    };
+
+    return {
+      list,
+      pagination,
     };
   }
+  
 
   async findHotelByUser(hotelId: string, user: userEntity) {
     const hotel = await this.prisma.hotel.findFirst({
       where: {
         id: hotelId,
-        userId: user.id,
+        userId: user.sub,
       },
     });
     return hotel;
@@ -86,8 +160,8 @@ export class RoomService {
   // find  hotels associated with user
   async getRooms(hotelId: string, user: userEntity) {
     //  find if the hotel exist
-    const hotel = await this.findHotelByUser(hotelId,user)
-    if (!hotel) bad('hotel not found ')
+    const hotel = await this.findHotelByUser(hotelId, user);
+    if (!hotel) bad('hotel not found ');
 
     const rooms = await this.prisma.room.findMany({
       where: { hotelId: hotel.id },
@@ -99,7 +173,7 @@ export class RoomService {
 
   // find each hotel
   async getRoom(hotelId: string, roomId: string, user: userEntity) {
-    const hotel = await this.findHotelByUser(hotelId,user)
+    const hotel = await this.findHotelByUser(hotelId, user);
     if (!hotel) bad('hotel not found ');
     const room = await this.prisma.room.findFirst({
       where: {
@@ -149,8 +223,9 @@ export class RoomService {
   }
 
   async deleteRoom(roomId: string) {
-    const room = await this.prisma.room.findUnique({
-      where: { id: roomId },
+    const room = await this.prisma.room.findFirst({
+      where: { id: roomId
+       },
     });
 
     if (!room) {

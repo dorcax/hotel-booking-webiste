@@ -52,7 +52,7 @@ export class AuthOtpTokenService {
     });
     if (!token) {
       bad('invalid token');
-      return;
+    
     }
 
     // check if it have not expired
@@ -71,7 +71,7 @@ export class AuthOtpTokenService {
   async deleteOtp(id: string) {
     return await this.prisma.authOtpToken.delete({
       where: {
-        id,
+      id,
       },
     });
   }

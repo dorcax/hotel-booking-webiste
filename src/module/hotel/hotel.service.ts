@@ -16,30 +16,45 @@ export class HotelService {
   async createHotel(dto: createHotelDto, user: userEntity) {
     const { attachments, rule, ...rest } = dto;
 
+    console.log("dtooooo",dto)
+    
+
+
     // find if user exist
     const currentUser = await this.prisma.user.findUnique({
       where: {
-        id: user.id,
+        id: user.sub,
       },
     });
 
+
+    console.log("uuusuu",currentUser)
+
     if (!currentUser) bad('user does not exist');
-    const hotel = await this.prisma.hotel.create({
+   try {
+     const hotel = await this.prisma.hotel.create({
       data: {
         ...rest,
-        rule: connectId(rule),
+        rule:connectId(rule),
         attachment: createAttachments(attachments),
         user: connectId(currentUser.id),
+        
       },
     });
+    console.log("ggggggg",hotel)
     return hotel;
+   } catch (error) {
+    console.log(error)
+   }
+    
+    
   }
 
   // find  hotels associated with user
   async getHotels(user: userEntity) {
     const hotels = await this.prisma.hotel.findMany({
       where: {
-        userId: user.id,
+        userId: user.sub,
       },
     });
     if (!hotels.length) bad('no hotels found for this user ');
@@ -48,11 +63,11 @@ export class HotelService {
   }
 
   // find each hotel
-  async getHotel(user: userEntity, hotelId: string) {
+  async getHotel(user: userEntity) {
     const hotel = await this.prisma.hotel.findUnique({
       where: {
-        id: hotelId,
-        userId: user.id,
+     
+        userId: user.sub,
       },
     });
     if (!hotel) bad('no hotel found for this user ');
@@ -106,7 +121,7 @@ export class HotelService {
       where: { id: hotelId },
     });
 
-    if (!hotel || hotel.userId !== user.id) {
+    if (!hotel || hotel.userId !== user.sub) {
       bad('Hotel not found or you are not the owner');
     }
 

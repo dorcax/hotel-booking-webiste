@@ -8,4 +8,6 @@ import { PrismaService } from '../prisma/prisma.service';
   providers: [AuthOtpTokenService,PrismaService],
   exports:[AuthOtpTokenService]
 })
-export class AuthOtpTokenModule {}
+export class AuthOtpTokenModule {
+  
+}

@@ -5,6 +5,7 @@ import {
   loginDto,
   registerDto,
   resetPasswordDto,
+  userEntity,
   verifyEmailDto,
 } from './auth.types';
 import { PrismaService } from 'src/services/prisma/prisma.service';
@@ -17,6 +18,7 @@ import { Verification_Mail } from 'src/services/event/event.type';
 import { JwtService } from '@nestjs/jwt';
 import { generateOtp } from 'src/utils/generateOtp';
 import { AuthOtpTokenType } from '@prisma/client';
+import { HotelService } from '../hotel/hotel.service';
 
 @Injectable()
 export class AuthService {
@@ -25,6 +27,7 @@ export class AuthService {
     private readonly authOtpTokenService: AuthOtpTokenService,
     private eventEmitter: EventEmitter2,
     private jwtService: JwtService,
+    private hotelService:HotelService
   ) {}
   // check if user already exist before registering them
   async register(dto: registerDto) {
@@ -46,6 +49,7 @@ export class AuthService {
         email,
         gender,
         phoneNumber,
+        role:"CUSTOMER",
         auth: {
           create: {
             password: await argon2.hash(password),
@@ -101,11 +105,27 @@ export class AuthService {
     if (!matched) bad('invalid credential');
 
     // jwt token
-    const payload = { sub: user.id, role: user.role };
+    const payload = { sub: user.id, role: user.role, };
     const token = await this.jwtService.signAsync(payload);
+    // find the user hotel 
+    const userEntity ={
+      sub:user.id,
+      role:user.role,
+      email:email
+
+    }
+ 
+    let hotelId: string|null  =null 
+    if(user.role ==="CUSTOMER"){
+      const hotel =await this.hotelService.getHotel(userEntity)
+       hotelId= hotel?.id ?? null
+    }
+  
     return {
       token: token,
       user: user.role,
+      hotelId
+
     };
   }
 
@@ -134,7 +154,7 @@ export class AuthService {
         isVerified: true,
       },
     });
-    await this.authOtpTokenService.deleteOtp(otp.code);
+    await this.authOtpTokenService.deleteOtp(otp.id);
     return {
       message: 'email verified successfully ',
     };
@@ -238,4 +258,16 @@ export class AuthService {
       message: 'password reset successful',
     };
   }
+  // find user 
+  async authUser(user:userEntity){
+    console.log("user",user)
+
+    return await this.prisma.user.findUnique({
+      where:{
+        id:user.sub
+      },
+    
+    })
+
+  } 
 }

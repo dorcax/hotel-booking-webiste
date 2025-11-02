@@ -30,7 +30,7 @@ export class AuthGuard implements CanActivate {
 
       const user = await this.prismaService.user.findUnique({
         where: {
-          id: payload.id,
+          id: payload.sub,
         },
       });
 
@@ -48,7 +48,7 @@ export class AuthGuard implements CanActivate {
 
   private ExtractHeaderToken(request: Request): string | undefined {
     const authHeader = request.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer')) {
+    if (authHeader && authHeader.startsWith('Bearer ')) {
       return authHeader.split(' ')[1];
     }
   }

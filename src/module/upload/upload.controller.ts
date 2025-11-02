@@ -12,23 +12,24 @@ import {
 import { UploadService } from './upload.service';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { userEntity } from '../auth/auth.types';
-import { AuthUser } from '../auth/deocorator/auth.decorator';
+import {Auth, AuthUser } from '../auth/deocorator/auth.decorator';
 import { bad } from 'src/utils/error';
 
 @Controller('upload')
 export class UploadController {
   constructor(private readonly uploadService: UploadService) {}
 
-  @Post(':id')
+  @Auth()
+  @Post()
   @UseInterceptors(FileInterceptor('file'))
   async upload(
-    @Param('id') id: string,
+    // @Param('id') id: string,
     @UploadedFile() file: Express.Multer.File,
     @AuthUser() user: userEntity,
     @Query('order') orderParams?: string,
   ) {
     const order = Number(orderParams) || 0;
-    return await this.uploadService.upload(id, file, order, user);
+    return await this.uploadService.uploadFile(file, order, user);
   }
 
   @Post('bulk')

@@ -22,7 +22,7 @@ export class FlutterwaveService {
         amount,
         currency,
         txRef,
-        user:connectId(user.id),
+        user:connectId(user.sub),
         redirectUrl:'http://localhost:3000/payment/success',
         room:connectId(roomId),
         reservation:connectId(reservationId)

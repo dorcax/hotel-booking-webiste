@@ -6,6 +6,8 @@ import { AuthOtpTokenModule } from 'src/services/auth-otp-token/auth-otp-token.m
 import { JwtModule } from '@nestjs/jwt';
 import { GoogleStrategy } from './strategies/GoogleStrategy';
 import { PassportModule } from '@nestjs/passport';
+import { HotelModule } from '../hotel/hotel.module';
+import { HotelService } from '../hotel/hotel.service';
 
 @Module({
   imports:[AuthOtpTokenModule,JwtModule.register({
@@ -19,6 +21,6 @@ import { PassportModule } from '@nestjs/passport';
     PassportModule.register({ defaultStrategy: 'google' })
 ],
   controllers: [AuthController],
-  providers: [AuthService,PrismaService,GoogleStrategy],
+  providers: [AuthService,PrismaService,HotelService,GoogleStrategy],
 })
 export class AuthModule {}

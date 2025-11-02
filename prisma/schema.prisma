@@ -16,26 +16,32 @@ datasource db {
 }
 
 enum Role {
-  USER
-  ADMIN
+  CUSTOMER
+HOTELOWNER
+  SUPERADMIN
 }
 
 model User {
-  id           String         @id @default(uuid())
-  email        String         @unique
-  isVerified   Boolean        @default(false)
-  role         Role           @default(USER)
-  phoneNumber  String         @unique
-  name         String
-  gender       String
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @default(now())
-  auth         Auth?
-  token        AuthOtpToken[]
-  hotel        Hotel[]
+  id          String         @id @default(uuid())
+  email       String         @unique
+  isVerified  Boolean        @default(false)
+  role        Role           @default(CUSTOMER)
+  phoneNumber String         @unique
+  name        String
+  gender      String
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @default(now())
+  auth        Auth?
+  token       AuthOtpToken[]
+  
+
+  // hotel        Hotel[]
+  hotel Hotel?
+
   upload       Upload[]
   Reservations Reservation[]
   transactions Transaction[]
+  
 }
 
 model Auth {
@@ -68,7 +74,7 @@ model AuthOtpToken {
 }
 
 model Hotel {
-  id           String         @id @default(uuid())
+  id           String      @id @default(uuid())
   name         String
   email        String
   contactPhone String
@@ -76,16 +82,16 @@ model Hotel {
   address      String
   amenities    String[]
   features     String[]
-  user         User           @relation(fields: [userId], references: [id])
-  userId       String
-  attachment   Attachments    @relation(fields: [attachmentId], references: [id], onDelete: Cascade)
+  user         User        @relation(fields: [userId], references: [id])
+  userId       String      @unique
+  attachment   Attachments @relation(fields: [attachmentId], references: [id])
   attachmentId String
-  account      Account?
-  rule         Upload?        @relation(fields: [ruleId], references: [id], onDelete: Cascade)
-  ruleId       String?
+
+  rule          Upload?        @relation(fields: [ruleId], references: [id])
+  ruleId        String?
   authOtpTokens AuthOtpToken[]
-  rooms        Room[]
-  reservations Reservation[]
+  rooms         Room[]
+  reservations  Reservation[]
 
   fullText String @default("")
 
@@ -101,30 +107,35 @@ enum RoomCategory {
 
 model Room {
   id           String        @id @default(uuid())
+  roomNumber   String        @unique
   category     RoomCategory  @default(SINGLE)
   description  String
   isAvailable  Boolean       @default(true)
   price        Float
-  number       String
+  capacity     Int
+  floor        Int
+  amenities    String[]
   hotel        Hotel         @relation(fields: [hotelId], references: [id])
   hotelId      String
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @default(now())
-  attachment   Attachments   @relation(fields: [attachmentId], references: [id], onDelete: Cascade)
+  attachment   Attachments   @relation(fields: [attachmentId], references: [id])
   attachmentId String
   reservations Reservation[]
   fullText     String        @default("")
   transactions Transaction[]
 }
 
-model Account {
-  id           String @id @default(uuid())
-  bankName     String
-  accountName  String
-  accountNumber String
-  hotel        Hotel  @relation(fields: [hotelId], references: [id])
-  hotelId      String @unique
-}
+// model Invite {
+//   id        String   @id @default(uuid())
+//   email     String
+//   token     String   @unique
+//   user      User     @relation(fields: [userId], references: [id])
+//   userId    String
+//   isUsed    Boolean  @default(false)
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @default(now())
+// }
 
 model Upload {
   id          String        @id @default(uuid())
@@ -140,13 +151,13 @@ model Upload {
   attachments Attachments[]
   user        User          @relation(fields: [userId], references: [id])
   userId      String
-  hotels       Hotel[]
+  hotels      Hotel[]
 }
 
 model Attachments {
   id      String   @id @default(uuid())
   uploads Upload[]
-  hotels   Hotel[]
+  hotels  Hotel[]
   rooms   Room[]
 }
 
@@ -158,23 +169,23 @@ enum BookingStatus {
 }
 
 model Reservation {
-  id       String        @id @default(uuid())
-  checkIn  DateTime
-  checkOut DateTime
-  status   BookingStatus @default(PENDING)
-  user     User          @relation(fields: [userId], references: [id])
-  userId   String
-  hotel    Hotel         @relation(fields: [hotelId], references: [id])
-  hotelId  String
-  room     Room          @relation(fields: [roomId], references: [id])
-  roomId   String
+  id           String        @id @default(uuid())
+  checkIn      DateTime
+  checkOut     DateTime
+  status       BookingStatus @default(PENDING)
+  user         User          @relation(fields: [userId], references: [id])
+  userId       String
+  hotel        Hotel         @relation(fields: [hotelId], references: [id])
+  hotelId      String
+  room         Room          @relation(fields: [roomId], references: [id])
+  roomId       String
   transactions Transaction[]
 }
 
-enum PaymentType {
-  CARD
-  BANKTRANSFER
-}
+// enum PaymentType {
+//   CARD
+//   BANKTRANSFER
+// }
 
 enum TransactionStatus {
   CANCELLED
@@ -188,9 +199,9 @@ model Transaction {
   amount            String
   txRef             String
   currency          String
-  redirectUrl      String
+  redirectUrl       String
   flwRef            String?
-  paymentType       PaymentType       @default(BANKTRANSFER)
+  // paymentType       PaymentType       @default(BANKTRANSFER)
   transactionStatus TransactionStatus @default(PENDING)
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @default(now())
@@ -198,6 +209,6 @@ model Transaction {
   userId            String
   room              Room              @relation(fields: [roomId], references: [id])
   roomId            String
-  reservation       Reservation?      @relation(fields: [reservationId],references: [id])
+  reservation       Reservation?      @relation(fields: [reservationId], references: [id])
   reservationId     String?
 }

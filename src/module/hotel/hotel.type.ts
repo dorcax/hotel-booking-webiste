@@ -1,4 +1,5 @@
-import { IsArray, IsEmail, IsString } from "class-validator"
+import { IsArray, IsEmail, IsString, IsUUID } from "class-validator"
+import { PaginationqueryDto } from "src/utils/paginationQuery.type"
 
 export class createHotelDto{
     @IsString()
@@ -37,3 +38,8 @@ export class createHotelDto{
 
 // disconnect = removes specific ones.
 export class updateHotelDto extends createHotelDto{}
+
+export class listHotelQueryDto extends PaginationqueryDto{
+    @IsUUID()
+    hotelId?:string
+}
