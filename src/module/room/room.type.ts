@@ -30,17 +30,7 @@ export class createRoomDto {
   attachments: string[];
 }
 
-export class updateRoomDto {
-  @IsString()
-  name: string;
-  @IsString()
-  description: string;
-  @IsNumber()
-  price: number;
-  @IsString()
-  number: string;
-  @IsEnum(RoomCategory)
-  category: RoomCategory;
-  @IsArray()
-  attachments: string[];
+export class updateRoomDto  extends createRoomDto{
+
+
 }

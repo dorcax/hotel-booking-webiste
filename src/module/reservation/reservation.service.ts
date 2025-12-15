@@ -4,6 +4,8 @@ import { userEntity } from '../auth/auth.types';
 import { bad } from 'src/utils/error';
 import { CreateReservationDto } from './reservation.type';
 import { connectId } from 'prisma/prisma.util';
+import { add } from 'date-fns/fp';
+import { addMinutes } from 'date-fns';
 
 @Injectable()
 export class ReservationService {
@@ -35,10 +37,14 @@ export class ReservationService {
         where:{
             roomId,
             AND:[{checkIn:{lte:checkOut}},{checkOut:{gte:checkIn}}],
-            status:{in:["CONFIRMED","COMPLETED"]},
-            room:{
-              isAvailable:false
-            }
+            OR:[
+              {status:"CONFIRMED"},
+              {status:"PENDING",
+                expiresAt:{gt:new Date()}
+              }
+            ]
+      
+          
         }
     })
     if(roomIsAvailable) bad("Room already booked for these dates")
@@ -47,13 +53,14 @@ export class ReservationService {
         const reservation =await this.prisma.reservation.create({
             data:{
                 checkIn,checkOut,
+                expiresAt:addMinutes(new Date(),15),
                 user:connectId(existingUser.id),
                 hotel:connectId(hotelId),
                 room:connectId(roomId)
             }
         })
      return {
-        message:" room reservation created successfully.please complete payment",
+        message:" room reservation created successfully.please compleayment",
         // payment link send
      }
   }

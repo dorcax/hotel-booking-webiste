@@ -1,8 +1,8 @@
-import { Body, Controller, Delete, Get, Param, Post, Query } from '@nestjs/common';
-import { RoomService } from './room.service';
-import { createRoomDto, listRoomQuery } from './room.type';
-import { Auth, AuthUser } from '../auth/deocorator/auth.decorator';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { userEntity } from '../auth/auth.types';
+import { Auth, AuthUser } from '../auth/deocorator/auth.decorator';
+import { RoomService } from './room.service';
+import { createRoomDto, listRoomQuery, updateRoomDto } from './room.type';
 
 @Controller('room')
 export class RoomController {
@@ -32,10 +32,15 @@ export class RoomController {
     @Param('hotelId') hotelId: string,
     @Param('roomId') roomId: string,
     @AuthUser() user: userEntity,
+    
   ) {
     return await this.roomService.getRoom(hotelId, roomId, user);
   }
-
+ @Auth()
+  @Patch(":roomId")
+  async updateHotel(@Body() dto:updateRoomDto,@AuthUser() user:userEntity,@Param("roomId") roomId:string) {
+    return await this.roomService.updateRoom(dto,user,roomId);
+  }
    
   @Auth()
   @Delete(":roomId")

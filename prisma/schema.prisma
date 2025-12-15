@@ -17,7 +17,7 @@ datasource db {
 
 enum Role {
   CUSTOMER
-HOTELOWNER
+  HOTELOWNER
   SUPERADMIN
 }
 
@@ -33,7 +33,6 @@ model User {
   updatedAt   DateTime       @default(now())
   auth        Auth?
   token       AuthOtpToken[]
-  
 
   // hotel        Hotel[]
   hotel Hotel?
@@ -41,7 +40,6 @@ model User {
   upload       Upload[]
   Reservations Reservation[]
   transactions Transaction[]
-  
 }
 
 model Auth {
@@ -173,6 +171,7 @@ model Reservation {
   checkIn      DateTime
   checkOut     DateTime
   status       BookingStatus @default(PENDING)
+  expiresAt    DateTime
   user         User          @relation(fields: [userId], references: [id])
   userId       String
   hotel        Hotel         @relation(fields: [hotelId], references: [id])
