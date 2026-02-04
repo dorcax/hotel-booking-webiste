@@ -7,28 +7,7 @@ import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handleba
 
 @Global()
 @Module({
-  imports:[
-    MailerModule.forRoot({
-      transport:{
-        host:process.env.MAIL_HOST,
-        port:Number(process.env.MAIL_PORT),
-        auth:{
-          user:process.env.MAIL_USERNAME,
-          pass:process.env.MAIL_PASSWORD
-        }
-      },
-      defaults:{
-        from:`hotel website ${process.env.MAILDEFAULT}`
-      },
-      template:{
-        dir:join(process.cwd(),"./src/services/mail/templates"),
-        adapter:new HandlebarsAdapter(),
-        options:{
-          strict:true
-        }
-      }
-    })
-  ],
+
   controllers: [MailController],
   providers: [MailService],
   exports:[MailService]

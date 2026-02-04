@@ -1,67 +1,84 @@
 import { Injectable } from '@nestjs/common';
+import { addMinutes } from 'date-fns';
+import { connectId } from 'prisma/prisma.util';
 import { PrismaService } from 'src/services/prisma/prisma.service';
-import { userEntity } from '../auth/auth.types';
 import { bad } from 'src/utils/error';
 import { CreateReservationDto } from './reservation.type';
-import { connectId } from 'prisma/prisma.util';
-import { add } from 'date-fns/fp';
-import { addMinutes } from 'date-fns';
+import { FlutterwaveService } from 'src/services/flutterwave/flutterwave.service';
 
 @Injectable()
 export class ReservationService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService,private readonly flutterWave:FlutterwaveService) {}
 
   async createBooking(dto: CreateReservationDto) {
-    const { user, checkIn, checkOut, roomId, hotelId } = dto;
-    // verify if user exist 
+    const { user, checkIn, checkOut, roomId, propertyId } = dto;
+
+    // validate date
+    if (new Date(checkIn) >= new Date(checkOut))
+      return bad('checkout date must be greater than checkin date');
+
+    if (new Date(checkIn) < new Date())
+      return bad('Check-in date cannot be in the past');
+    // verify if user exist
     const existingUser = await this.prisma.user.findUnique({
       where: {
-        id: user.sub,
+        id: user.id,
       },
     });
 
     if (!existingUser) bad('user not found ');
 
- 
     //Verify that the hotel exists and contains the roomId
     const room = await this.prisma.room.findFirst({
       where: {
         id: roomId,
-        hotelId,
+        propertyId,
       },
     });
     if (!room) bad('room not found');
     // Check if room is already booked in the date range
+    const reservation = await this.prisma.$transaction(async (tx) => {
+     const roomIsAvailable = await tx.booking.findFirst({
+        where: {
+          roomId,
+          AND: [{ checkIn: { lt: checkOut } }, { checkOut: { gt: checkIn } }],
+          OR: [
+            { status: 'CONFIRMED' },
+            { status: 'PENDING', expiresAt: { gt: new Date() } },
+          ],
+        },
+      });
+      if (roomIsAvailable) bad('Room already booked for these dates');
 
-    const roomIsAvailable =await this.prisma.reservation.findFirst({
-        where:{
-            roomId,
-            AND:[{checkIn:{lte:checkOut}},{checkOut:{gte:checkIn}}],
-            OR:[
-              {status:"CONFIRMED"},
-              {status:"PENDING",
-                expiresAt:{gt:new Date()}
-              }
-            ]
+      // calculate the amount of night the user want to stay
+      const millisecondsInOneDay = 1000 * 60 * 60 * 24;
+      const nights =Math.ceil( (new Date(checkOut).getTime() - new Date(checkIn).getTime())/millisecondsInOneDay);
+      const totalCalculation = (nights / millisecondsInOneDay) * room.price;
+
+         const newReservation =  await tx.booking.create({
+        data: {
+          checkIn,
+          checkOut,
+          totalPrice: parseInt(totalCalculation.toString()),
+          expiresAt: addMinutes(new Date(), 15),
+          guest: connectId(existingUser.id),
+          property: connectId(propertyId),
+          room: connectId(roomId),
+        },
+      });
+      return newReservation
+
       
-          
-        }
-    })
-    if(roomIsAvailable) bad("Room already booked for these dates")
+    });
+    const totalAmount =reservation.totalPrice
 
-        // create new reservation and send payment link 
-        const reservation =await this.prisma.reservation.create({
-            data:{
-                checkIn,checkOut,
-                expiresAt:addMinutes(new Date(),15),
-                user:connectId(existingUser.id),
-                hotel:connectId(hotelId),
-                room:connectId(roomId)
-            }
-        })
-     return {
-        message:" room reservation created successfully.please compleayment",
-        // payment link send
-     }
+    const  reservationLink =await this.flutterWave.initiatePayment({amount:totalAmount, currency: 'NGN', roomId,reservationId:reservation.id},user)
+        return {
+      message: 'Room reservation created successfully. Please complete payment.',
+      reservation,
+      
+      paymentLink: reservationLink?.payment_link,
+    };
+
   }
 }

@@ -17,7 +17,8 @@ export class AuthGuard implements CanActivate {
   ) {}
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
-    const token = this.ExtractHeaderToken(request);
+    // const token = this.ExtractHeaderToken(request);
+    const token =request.cookies.access_token
     if (!token) {
       throw new UnauthorizedException();
     }
@@ -38,7 +39,7 @@ export class AuthGuard implements CanActivate {
         throw new UnauthorizedException('user not found');
       }
 
-      request.user = payload;
+      request.user = user
     } catch (error) {
       throw new UnauthorizedException();
     }

@@ -1,19 +1,41 @@
-import { MailerService } from '@nestjs-modules/mailer';
-import { Injectable } from '@nestjs/common';
-import { VerificationDto } from './mail.types';
-import { Auth_Otp_Token_Subject } from 'src/module/auth/auth.types';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { Resend } from 'resend';
+import React from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 
 @Injectable()
 export class MailService {
-    constructor(private readonly mailerService:MailerService){}
-    async SendVerficationMail(dto:VerificationDto){
-        const{email,...rest} =dto
-     await this.mailerService.sendMail({
-        to:email,
-        template:"./verify-email",
-        
-        subject:Auth_Otp_Token_Subject.Verify_Email,
-        context:rest
-     })
-    }
+  private resend: Resend;
+
+  constructor(private configService: ConfigService) {
+    this.resend = new Resend(
+      this.configService.get<string>('RESEND_API_KEY'),
+    );
+  }
+
+ 
+   
+ async sendMail<T extends Record<string, any>>(
+  to: string,
+  subject: string,
+  Template: React.ComponentType<T>, 
+  props: T                          
+) {
+//   const html = renderToStaticMarkup(<Template {...props} />);
+  const html = renderToStaticMarkup(React.createElement(Template, props));
+
+  
+  await this.resend.emails.send({
+    from: 
+    // this.configService.get<string>('RESEND_FROM_EMAIL')
+    //  ||
+      'onboarding@resend.dev',
+    to,
+    subject,
+    html,
+    
+  });
+}
+
 }

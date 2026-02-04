@@ -16,8 +16,8 @@ export class AuthController {
     }
 
     @Post("login")
-    loginUser(@Body() dto:loginDto){
-      return this.authService.login(dto)
+    loginUser(@Body() dto:loginDto,@Res({passthrough:true}) res:Response){
+      return this.authService.login(dto,res)
 
     }
 

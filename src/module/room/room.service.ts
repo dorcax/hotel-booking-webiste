@@ -14,19 +14,21 @@ import { Prisma } from '@prisma/client';
 @Injectable()
 export class RoomService {
   constructor(private prisma: PrismaService) {}
+  
 
-  async createRoom(dto: createRoomDto, user) {
+  async createRoom(dto: createRoomDto, user:userEntity) {
     const { attachments, ...rest } = dto;
 
     // find the hotel exist
-    const hotel = await this.prisma.hotel.findUnique({
+    const property = await this.prisma.property.findFirst({
       where: {
-        userId: user.sub,
+        hostId: user.id,
       },
     });
 
     console.log('user', user);
-    if (!hotel) bad('hotel does not exist');
+    if (!property) bad('property does not exist');
+    
     // create the room
     const fullText = makeFullText(
       rest,
@@ -40,8 +42,8 @@ export class RoomService {
       data: {
         ...rest,
         fullText,
-        hotel: connectId(hotel.id),
-        attachment: createAttachments(attachments),
+        property: connectId(property.id),
+        attachments: createAttachments(attachments),
       },
     });
 
@@ -98,7 +100,7 @@ export class RoomService {
     const page = query.page || 1;
     const skip = take * (page - 1);
     const orderBy = { createdAt: 'desc' } as const;
-    where.hotelId = { equals: query.hotelId };
+    where.propertyId = { equals: query.propertyId };
 
     const [list, totalCount, activeCount, inactiveCount] = await Promise.all([
       this.prisma.room.findMany({
@@ -110,7 +112,7 @@ export class RoomService {
         take,
         orderBy,
         include: {
-          attachment: {
+          attachments: {
             select: {
               uploads: true,
             },
@@ -152,22 +154,22 @@ export class RoomService {
   }
 
   async findHotelByUser(hotelId: string, user: userEntity) {
-    const hotel = await this.prisma.hotel.findFirst({
+    const hotel = await this.prisma.property.findFirst({
       where: {
         id: hotelId,
-        userId: user.sub,
+        hostId: user.id,
       },
     });
     return hotel;
   }
   // find  hotels associated with user
-  async getRooms(hotelId: string, user: userEntity) {
+  async getRooms(propertyId: string, user: userEntity) {
     //  find if the hotel exist
-    const hotel = await this.findHotelByUser(hotelId, user);
-    if (!hotel) bad('hotel not found ');
+    const property = await this.findHotelByUser(propertyId, user);
+    if (!property) bad('hotel not found ');
 
     const rooms = await this.prisma.room.findMany({
-      where: { hotelId: hotel.id },
+      where: { propertyId: property.id },
     });
     if (!rooms.length) bad('no rooms found  ');
 
@@ -198,7 +200,7 @@ export class RoomService {
     const room = await this.prisma.room.findUnique({
       where: { id: roomId },
       include: {
-        attachment: {
+        attachments: {
           select: {
             uploads: true,
           },
@@ -210,7 +212,7 @@ export class RoomService {
       throw new Error('Hotel not found');
     }
     
-    const existingImages = room.attachment.uploads.map((img: any) => img.url);
+    const existingImages = room.attachments.uploads.map((img: any) => img.url);
     console.log('attachment image to be updated', existingImages);
     
   //  determine which image to delete 
@@ -234,7 +236,7 @@ export class RoomService {
         },
         data:{
           ...rest,
-         attachment:{
+         attachments:{
         update:{
           uploads:{
             create:urlToCreate.map((url,idx)=>({
@@ -244,7 +246,7 @@ export class RoomService {
                 publicId: url,
                 size: 1,
                 order: existingImages.length + idx + 1,
-                user: { connect: { id: user.sub } },
+                user: { connect: { id: user.id } },
             }))
           }
         }

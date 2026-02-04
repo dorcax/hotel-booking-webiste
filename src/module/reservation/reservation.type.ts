@@ -5,7 +5,7 @@ export class CreateReservationDto{
      @IsUUID("4")
     user:userEntity
      @IsUUID("4")
-    hotelId:string
+    propertyId:string
 
     @IsDate()
     checkIn:Date

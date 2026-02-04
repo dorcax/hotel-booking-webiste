@@ -1,4 +1,13 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { JwtService } from '@nestjs/jwt';
+import { AuthOtpTokenType } from '@prisma/client';
+import * as argon2 from 'argon2';
+import { addMinutes } from 'date-fns';
+import { AuthOtpTokenService } from 'src/services/auth-otp-token/auth-otp-token.service';
+import { Verification_Mail } from 'src/services/event/event.type';
+import { PrismaService } from 'src/services/prisma/prisma.service';
+import { bad, mustHave } from 'src/utils/error';
 import {
   Auth_Otp_Token_Subject,
   forgotPasswordDto,
@@ -8,17 +17,6 @@ import {
   userEntity,
   verifyEmailDto,
 } from './auth.types';
-import { PrismaService } from 'src/services/prisma/prisma.service';
-import { bad, mustHave } from 'src/utils/error';
-import * as argon2 from 'argon2';
-import { AuthOtpTokenService } from 'src/services/auth-otp-token/auth-otp-token.service';
-import { addMinutes } from 'date-fns';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-import { Verification_Mail } from 'src/services/event/event.type';
-import { JwtService } from '@nestjs/jwt';
-import { generateOtp } from 'src/utils/generateOtp';
-import { AuthOtpTokenType } from '@prisma/client';
-import { HotelService } from '../hotel/hotel.service';
 
 @Injectable()
 export class AuthService {
@@ -27,7 +25,7 @@ export class AuthService {
     private readonly authOtpTokenService: AuthOtpTokenService,
     private eventEmitter: EventEmitter2,
     private jwtService: JwtService,
-    private hotelService:HotelService
+  
   ) {}
   // check if user already exist before registering them
   async register(dto: registerDto) {
@@ -49,7 +47,7 @@ export class AuthService {
         email,
         gender,
         phoneNumber,
-        role:"CUSTOMER",
+        role:"GUEST",
         auth: {
           create: {
             password: await argon2.hash(password),
@@ -77,7 +75,7 @@ export class AuthService {
   }
 
   // login in user
-  async login(dto: loginDto) {
+  async login(dto: loginDto,res) {
     const { email, password } = dto;
     // check if user exist in the database
     const user = await this.prisma.user.findUnique({
@@ -89,6 +87,7 @@ export class AuthService {
         isVerified: true,
         role: true,
         auth: true,
+       
       },
     });
     mustHave(user, 'invalid credentials', 401);
@@ -107,28 +106,23 @@ export class AuthService {
     // jwt token
     const payload = { sub: user.id, role: user.role, };
     const token = await this.jwtService.signAsync(payload);
-    // find the user hotel 
-    const userEntity ={
-      sub:user.id,
-      role:user.role,
-      email:email
-
-    }
- 
-    let hotelId: string|null  =null 
-    if(user.role ==="CUSTOMER"){
-      const hotel =await this.hotelService.getHotel(userEntity)
-       hotelId= hotel?.id ?? null
-    }
-  
+   
+    res.cookie('access_token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV ==="production",
+      sameSite: 'none',
+      maxAge: 24 * 60 * 60 * 1000,
+    });
+    
+    
     return {
-      token: token,
       user: user.role,
-      hotelId
+      // hotelId:user.hotel?.id
 
     };
   }
 
+  
   // verify the email
   async verifyEmail(dto: verifyEmailDto) {
     // check if the email exist
@@ -264,7 +258,7 @@ export class AuthService {
 
     return await this.prisma.user.findUnique({
       where:{
-        id:user.sub
+        id:user.id
       },
     
     })

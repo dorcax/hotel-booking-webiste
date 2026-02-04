@@ -13,9 +13,9 @@ export class CreateAuthOtpTokenDto {
     @IsString()
     email: string
     
-    @IsUUID("4")
-    @IsOptional()
-    hotelId?: string
+    // @IsUUID("4")
+    // @IsOptional()
+    // hotelId?: string
     @IsUUID("4")
     @IsString()
     userId: string

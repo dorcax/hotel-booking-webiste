@@ -3,7 +3,7 @@ export const FLUTTERWAVE_INITIATE_PAYMENT="https://api.flutterwave.com/v3/paymen
 export class CreateFlutterwaveDto {
  
   @IsString()
-  amount: string;
+  amount: number;
   @IsString()
   currency: string;
   @IsString()

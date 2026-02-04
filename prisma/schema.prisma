@@ -1,12 +1,5 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider        = "prisma-client-js"
-  // output   = "../generated/prisma"
   previewFeatures = ["fullTextSearchPostgres"]
 }
 
@@ -16,30 +9,35 @@ datasource db {
 }
 
 enum Role {
-  CUSTOMER
-  HOTELOWNER
-  SUPERADMIN
+  GUEST
+  HOST
+  ADMIN
 }
 
 model User {
-  id          String         @id @default(uuid())
-  email       String         @unique
-  isVerified  Boolean        @default(false)
-  role        Role           @default(CUSTOMER)
-  phoneNumber String         @unique
+  id          String  @id @default(uuid())
   name        String
-  gender      String
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @default(now())
-  auth        Auth?
-  token       AuthOtpToken[]
+  email       String  @unique
+  phoneNumber String? @unique
 
-  // hotel        Hotel[]
-  hotel Hotel?
+  gender        String?
+  role          Role           @default(GUEST)
+  isVerified    Boolean        @default(false)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  auth          Auth?
+  // Relations
+  properties    Property[]
+  bookings      Booking[]
+  payments      Payment[]
+  transactions  Transaction[]
+  uploads       Upload[]
+  AuthOtpTokens AuthOtpToken[]
+}
 
-  upload       Upload[]
-  Reservations Reservation[]
-  transactions Transaction[]
+enum PropertyType {
+  APARTMENT
+  HOTEL
 }
 
 model Auth {
@@ -60,154 +58,198 @@ model AuthOtpToken {
   type    AuthOtpTokenType @default(OTP)
   code    String           @unique
 
-  expiry  DateTime
-  email   String
-  user    User?    @relation(fields: [userId], references: [id])
-  userId  String?
-  hotel   Hotel?   @relation(fields: [hotelId], references: [id])
-  hotelId String?
+  expiry DateTime
+  email  String
+  user   User?    @relation(fields: [userId], references: [id])
+  userId String?
 
   @@index([code])
   @@index([email])
 }
 
-model Hotel {
-  id           String      @id @default(uuid())
-  name         String
-  email        String
-  contactPhone String
-  description  String
-  address      String
-  amenities    String[]
-  features     String[]
-  user         User        @relation(fields: [userId], references: [id])
-  userId       String      @unique
-  attachment   Attachments @relation(fields: [attachmentId], references: [id])
+model Property {
+  id          String       @id @default(uuid())
+  name        String
+  description String
+  address     String
+  city        String
+  country     String
+  type        PropertyType @default(APARTMENT)
+  amenities   String[]
+  // images      String[]
+
+  // Apartment-specific fields
+  price      Float?
+  capacity   Int?
+  isVerified Boolean @default(false)
+
+  host   User   @relation(fields: [hostId], references: [id])
+  hostId String
+
+  rooms        Room[]
+  bookings     Booking[]
+  // uploads     Upload[]
+  attachments  Attachments? @relation(fields: [attachmentId], references: [id])
   attachmentId String
-
-  rule          Upload?        @relation(fields: [ruleId], references: [id])
-  ruleId        String?
-  authOtpTokens AuthOtpToken[]
-  rooms         Room[]
-  reservations  Reservation[]
-
-  fullText String @default("")
-
-  @@index([name])
+  fullText     String       @default("")
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 }
 
 enum RoomCategory {
-  DELUXE
-  STANDARD
   SINGLE
+  STANDARD
+  DELUXE
   SUITE
 }
 
 model Room {
-  id           String        @id @default(uuid())
-  roomNumber   String        @unique
-  category     RoomCategory  @default(SINGLE)
-  description  String
-  isAvailable  Boolean       @default(true)
-  price        Float
-  capacity     Int
-  floor        Int
-  amenities    String[]
-  hotel        Hotel         @relation(fields: [hotelId], references: [id])
-  hotelId      String
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @default(now())
-  attachment   Attachments   @relation(fields: [attachmentId], references: [id])
-  attachmentId String
-  reservations Reservation[]
-  fullText     String        @default("")
+  id          String       @id @default(uuid())
+  title       String
+  description String
+  price       Float
+  capacity    Int
+  category    RoomCategory @default(SINGLE)
+  amenities   String[]
+  isAvailable Boolean      @default(true)
+
+  property   Property @relation(fields: [propertyId], references: [id])
+  propertyId String
+
+  bookings     Booking[]
+  payments     Payment[]
   transactions Transaction[]
-}
+  attachments  Attachments   @relation(fields: [attachmentId], references: [id])
+  attachmentId String        @unique
+  fullText     String        @default("")
 
-// model Invite {
-//   id        String   @id @default(uuid())
-//   email     String
-//   token     String   @unique
-//   user      User     @relation(fields: [userId], references: [id])
-//   userId    String
-//   isUsed    Boolean  @default(false)
-//   createdAt DateTime @default(now())
-//   updatedAt DateTime @default(now())
-// }
-
-model Upload {
-  id          String        @id @default(uuid())
-  name        String
-  type        String
-  size        Int
-  // data        Bytes
-  order       Int
-  url         String
-  publicId    String
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @default(now())
-  attachments Attachments[]
-  user        User          @relation(fields: [userId], references: [id])
-  userId      String
-  hotels      Hotel[]
-}
-
-model Attachments {
-  id      String   @id @default(uuid())
-  uploads Upload[]
-  hotels  Hotel[]
-  rooms   Room[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 enum BookingStatus {
   PENDING
-  COMPLETED
   CONFIRMED
+  COMPLETED
   CANCELLED
 }
 
-model Reservation {
-  id           String        @id @default(uuid())
-  checkIn      DateTime
-  checkOut     DateTime
-  status       BookingStatus @default(PENDING)
-  expiresAt    DateTime
-  user         User          @relation(fields: [userId], references: [id])
-  userId       String
-  hotel        Hotel         @relation(fields: [hotelId], references: [id])
-  hotelId      String
-  room         Room          @relation(fields: [roomId], references: [id])
-  roomId       String
+model Booking {
+  id         String        @id @default(uuid())
+  checkIn    DateTime
+  checkOut   DateTime
+  totalPrice Float
+  status     BookingStatus @default(PENDING)
+
+  guest   User   @relation(fields: [guestId], references: [id])
+  guestId String
+
+  property   Property? @relation(fields: [propertyId], references: [id])
+  propertyId String?
+
+  room     Room?   @relation(fields: [roomId], references: [id])
+  roomId   String?
+  fullText String  @default("")
+
+  expiresAt  DateTime
+
+  payment      Payment[]
   transactions Transaction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
-// enum PaymentType {
-//   CARD
-//   BANKTRANSFER
-// }
+model Attachments {
+  id         String     @id @default(uuid())
+  uploads    Upload[]
+  properties Property[]
+  rooms      Room[]
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  CARD
+  WALLET
+  BANK_TRANSFER
+  PAYPAL
+}
+
+model Payment {
+  id            String        @id @default(uuid())
+  amount        Float
+  currency      String        @default("USD")
+  status        PaymentStatus @default(PENDING)
+  method        PaymentMethod?
+  transactionId String?
+
+  guest   User   @relation(fields: [guestId], references: [id])
+  guestId String
+
+  booking   Booking @relation(fields: [bookingId], references: [id])
+  bookingId String
+
+  room   Room   @relation(fields: [roomId], references: [id])
+  roomId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
 
 enum TransactionStatus {
-  CANCELLED
+  PENDING
   SUCCESS
   FAILED
-  PENDING
+  CANCELLED
 }
 
 model Transaction {
-  id                String            @id @default(uuid())
-  amount            String
-  txRef             String
-  currency          String
-  redirectUrl       String
-  flwRef            String?
-  // paymentType       PaymentType       @default(BANKTRANSFER)
-  transactionStatus TransactionStatus @default(PENDING)
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @default(now())
-  user              User              @relation(fields: [userId], references: [id])
-  userId            String
-  room              Room              @relation(fields: [roomId], references: [id])
-  roomId            String
-  reservation       Reservation?      @relation(fields: [reservationId], references: [id])
-  reservationId     String?
+  id        String            @id @default(uuid())
+  amount     Int
+  currency  String            @default("USD")
+  status    TransactionStatus @default(PENDING)
+  // method    PaymentMethod?
+  reference String?
+  response  String?
+  redirectUrl String?
+  flwRef  String?
+
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+
+  booking   Booking? @relation(fields: [bookingId], references: [id])
+  bookingId String?
+
+  room   Room?   @relation(fields: [roomId], references: [id])
+  roomId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Upload {
+  id   String @id @default(uuid())
+  name String
+  url  String
+  publicId String
+  type String
+   size Int
+   order Int
+
+  // property    Property? @relation(fields: [propertyId], references: [id])
+  // propertyId  String?
+  // room        Room?     @relation(fields: [roomId], references: [id])
+  // roomId      String?
+  user         User?        @relation(fields: [userId], references: [id])
+  userId       String?
+  attachments  Attachments? @relation(fields: [attachmentId], references: [id])
+  attachmentId String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 }

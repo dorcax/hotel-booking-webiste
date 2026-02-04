@@ -22,7 +22,7 @@ export class AuthOtpTokenService {
   }
 
   async create(createAuthOtpTokenDto: CreateAuthOtpTokenDto) {
-    const { subject, email, type, expiry, hotelId, userId } =
+    const { subject, email, type, expiry, userId } =
       createAuthOtpTokenDto;
     const code = type === 'OTP' ? generateOtp() : v4();
     //  create the token
@@ -33,7 +33,7 @@ export class AuthOtpTokenService {
         type,
         expiry,
         userId,
-        hotelId,
+      
         code,
       },
     })

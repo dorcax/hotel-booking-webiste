@@ -5,12 +5,12 @@ import { PaginationqueryDto } from 'src/utils/paginationQuery.type';
 
 export class listRoomQuery extends PaginationqueryDto {
   @IsUUID('4')
-  hotelId: string;
+  propertyId: string;
 }
 
 export class createRoomDto {
   @IsString()
-  roomNumber: string;
+  title: string;
   @IsString()
   description: string;
   @Type(() => Number)

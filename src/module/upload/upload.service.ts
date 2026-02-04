@@ -18,7 +18,7 @@ async uploadFile(file:Express.Multer.File,order:number,user:userEntity){
            type:file.mimetype,
            size:file.size,
            order,
-           user:connectId(user.sub)
+           user:connectId(user.id)
         }
     })
     console.log("upload be",data)
@@ -35,7 +35,7 @@ async uploadIds(ids:string[]){
         },
         include:{
             attachments:true,
-            hotels:true
+            user:true
         }
     })}
 
@@ -58,7 +58,7 @@ async deleteUpload(ids:string[],user:userEntity){
         where:{
             id:{in:ids},
             user:{
-                id:user.sub
+                id:user.id
             }
         }
     }) 
@@ -75,7 +75,7 @@ async deleteUpload(ids:string[],user:userEntity){
         where:{
             id:{in:ids},
             user:{
-                id:user.sub
+                id:user.id
             }
         }
     })
