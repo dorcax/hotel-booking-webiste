@@ -21,7 +21,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
       clientID: process.env.GOOGLE_CLIENT_ID ?? '',
       clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? '',
       //   http://localhost:3000/auth/google/callback
-      callbackURL: 'http://localhost:3000/auth/google/callback',
+      callbackURL: `${process.env.FRONTEND_URL}`,
       scope: ['profile', 'email'],
       passReqToCallback: true,
     };
