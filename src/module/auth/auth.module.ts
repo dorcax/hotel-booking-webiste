@@ -16,8 +16,10 @@ import { GoogleStrategy } from './strategies/GoogleStrategy';
       expiresIn:process.env.JWT_EXPIRES
     }
 
+    
   }),
     PassportModule.register({ defaultStrategy: 'google' })
+    //  PassportModule.register({ session: false }),
 ],
   controllers: [AuthController],
   providers: [AuthService,PrismaService,GoogleStrategy],

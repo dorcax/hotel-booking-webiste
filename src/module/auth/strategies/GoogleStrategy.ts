@@ -1,95 +1,75 @@
 import { Injectable } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
 import { PassportStrategy } from '@nestjs/passport';
-import { Role } from '@prisma/client';
-import {
-  Strategy,
-  Profile,
-  VerifyCallback,
-  StrategyOptions,
-  StrategyOptionsWithRequest,
-} from 'passport-google-oauth20';
+import { Strategy, Profile, VerifyCallback } from 'passport-google-oauth20';
 import { PrismaService } from 'src/services/prisma/prisma.service';
+import { Role } from '@prisma/client';
 
 @Injectable()
 export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
-  constructor(
-    private readonly jwtService: JwtService,
-    private readonly prisma: PrismaService,
-  ) {
-    const options: StrategyOptionsWithRequest = {
-      clientID: process.env.GOOGLE_CLIENT_ID ?? '',
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? '',
-      //   http://localhost:3000/auth/google/callback
-      callbackURL: `${process.env.FRONTEND_URL}`,
-      scope: ['profile', 'email'],
-      passReqToCallback: true,
-    };
-
-    super(options);
-    // super({
-    //   clientID: process.env.GOOGLE_CLIENT_ID,
-    //   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    //   callbackURL:'http://localhost:3000/auth/google/callback',
-    //   scope: ['profile', 'email'],
-    // });
+  constructor(private readonly prisma: PrismaService) {
+    super({
+      clientID: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      callbackURL: 'http://localhost:3000/auth/google/callback',
+      scope: ['email', 'profile'],
+    
+        //  accessType: 'offline',
+      prompt: 'select_account',
+    
+    } as any);
+    
+    console.log('🚀 GoogleStrategy initialized!');
+    console.log('Client ID present:', !!process.env.GOOGLE_CLIENT_ID);
+    console.log('Callback URL:', 'http://localhost:3000/auth/google/callback');
   }
 
   async validate(
-    req: Request,
     accessToken: string,
     refreshToken: string,
     profile: Profile,
-    done: VerifyCallback,
-  ): Promise<any> {
-    // This is where you handle what happens when Google sends back the user info
-    const { name, emails, photos } = profile;
+    done: VerifyCallback
+  ) {
+    console.log('✅ GoogleStrategy.validate() called!');
+    
+    try {
+      const email = profile.emails?.[0]?.value;
 
-    // find if user already exist
-    let user = await this.prisma.user.findUnique({
-      where: { email: emails?.[0]?.value },
-    });
+      if (!email) {
+        // FIX: Use done() not throw
+        return done(new Error('Google account has no email'));
+      }
 
-    let email = emails?.[0]?.value;
-    if (!email) {
-      throw new Error('Google account has no email address.');
-    }
+      console.log('Processing email:', email);
 
-    if (!user) {
-      user = await this.prisma.user.create({
-        data: {
-          name: `${name?.givenName}-${name?.familyName}`,
-          email,
-          auth: {
-            create: {
-              password: '',
+      let user = await this.prisma.user.findUnique({
+        where: { email },
+      });
+    const uniquePhoneNumber = `google-oauth-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+      if (!user) {
+        console.log('Creating new user for:', email);
+        user = await this.prisma.user.create({
+          data: {
+            name: `${profile.name?.givenName || ''} ${profile.name?.familyName || ''}`.trim(),
+            email,
+            isVerified: true,
+            role: Role.GUEST,
+            phoneNumber: uniquePhoneNumber,
+            gender: 'FEMALE',
+            auth: {
+              create: {
+                password: '',
+              },
             },
           },
-          isVerified: true,
-          role: Role.GUEST,
-          phoneNumber: '',
-          gender: 'FEMALE',
-        },
-      });
+        });
+      }
+
+      console.log('✅ User authenticated:', user.email);
+      return done(null, user);
+      
+    } catch (error) {
+      console.error('❌ Error in GoogleStrategy.validate:', error);
+      return done(error);
     }
-
-    // const userh = {
-    //   email: emails?.[0]?.value,
-    //   firstName: name?.givenName,
-    //   lastName: name?.familyName,
-    //   picture: photos?.[0]?.value,
-    //   accessToken,
-    // };
-
-    const payload = { sub: user.id, role: Role.GUEST };
-    const token = await this.jwtService.signAsync(payload);
-
-    // Tell Passport we're done and pass the user data
-    // Attach token to user data
-    const userWithToken = { ...user, token };
-
-    // ✅ Tell Passport we're done — return user + token
-    done(null, userWithToken);
-    // done(null, {user,token});
   }
 }

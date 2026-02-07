@@ -9,26 +9,32 @@ import {
 import { userEntity } from '../auth/auth.types';
 import { bad } from 'src/utils/error';
 import { makeFullText, searchQuery } from 'src/utils/filter';
-import { Prisma } from '@prisma/client';
+import { Prisma, PropertyType } from '@prisma/client';
 
 @Injectable()
 export class RoomService {
   constructor(private prisma: PrismaService) {}
-  
 
-  async createRoom(dto: createRoomDto, user:userEntity) {
+  async createRoom(dto: createRoomDto, user: userEntity) {
     const { attachments, ...rest } = dto;
 
     // find the hotel exist
     const property = await this.prisma.property.findFirst({
       where: {
         hostId: user.id,
+        
       },
     });
-
-    console.log('user', user);
-    if (!property) bad('property does not exist');
+      
     
+    
+    if (!property || property.hostId !== user.id) {
+    bad('Property not found or you are not the owner');
+  }
+ 
+    if (property.type !== PropertyType.HOTEL) {
+      bad('Rooms can only be created for properties of type HOTEL');
+    }
     // create the room
     const fullText = makeFullText(
       rest,
@@ -37,7 +43,7 @@ export class RoomService {
       'roomNumber',
       'category',
     );
-    // const fullText = makeFullText(room, updates, 'roomNumber', 'description', 'category')
+   
     await this.prisma.room.create({
       data: {
         ...rest,
@@ -50,49 +56,7 @@ export class RoomService {
     return { message: 'room created successfully' };
   }
 
-  // room search and pagination
 
-  // async list(query: listRoomQuery) {
-  //   let where: Prisma.RoomWhereInput = {};
-  //   const searchList =query.search
-
-  //   const search = searchQuery(searchList);
-  //   // if (query.search) {
-  //   //   where.fullText = { search: query.search };
-  //   // }
-
-  //   // if (query.hotelId) {
-  //   //   where.hotelId = { equals: query.hotelId };
-  //   // }
-  //   const take = query.count || 10;
-  //   const page = query.page || 1;
-  //   const skip = take * (page - 1);
-
-  //   const [rooms, totalCount] = await Promise.all([
-  //     this.prisma.room.findMany({
-  //       where,
-  //       skip,
-  //       take,
-  //       fullText:search ?{search} :undefined,
-  //       orderBy: { createdAt: 'desc' },
-  //       include: {
-  //         attachment:{
-  //           select:{
-  //             uploads:true
-  //           }
-  //         }
-  //       },
-  //     }),
-  //     this.prisma.room.count({ where }),
-  //   ]);
-  //   return {
-  //     data: rooms,
-  //    pagination:{
-  //      totalCount,
-  //     totalPage: Math.ceil(totalCount / take),
-  //    }
-  //   };
-  // }
   async list(query: listRoomQuery) {
     let where: Prisma.RoomWhereInput = {};
     const search = searchQuery(query.search ?? '');
@@ -196,7 +160,6 @@ export class RoomService {
     console.log('images to be updated', attachments);
     // check if room exist
 
-    
     const room = await this.prisma.room.findUnique({
       where: { id: roomId },
       include: {
@@ -211,55 +174,58 @@ export class RoomService {
     if (!room) {
       throw new Error('Hotel not found');
     }
-    
+
     const existingImages = room.attachments.uploads.map((img: any) => img.url);
     console.log('attachment image to be updated', existingImages);
-    
-  //  determine which image to delete 
-  const urlToDelete =existingImages.filter((url)=>!dto.attachments.includes(url))
-  const urlToCreate=dto.attachments.filter((url) => !existingImages.includes(url)) 
 
-  const updatedRoom =await this.prisma.$transaction(async(tx)=>{
-    // delete remove upload 
-    if(urlToDelete.length){
-      await tx.upload.deleteMany({
-        where:{
-          url:{in:urlToDelete}
-        }
-      })
-    }
-    // update the room info 
-   
+    //  determine which image to delete
+    const urlToDelete = existingImages.filter(
+      (url) => !dto.attachments?.includes(url),
+    );
+    const urlToCreate = dto.attachments?.filter(
+      (url) => !existingImages.includes(url),
+    );
+
+    const updatedRoom = await this.prisma.$transaction(async (tx) => {
+      // delete remove upload
+      if (urlToDelete.length) {
+        await tx.upload.deleteMany({
+          where: {
+            url: { in: urlToDelete },
+          },
+        });
+      }
+      // update the room info
+
       await tx.room.update({
-        where:{
-          id:room.id
+        where: {
+          id: room.id,
         },
-        data:{
+        data: {
           ...rest,
-         attachments:{
-        update:{
-          uploads:{
-            create:urlToCreate.map((url,idx)=>({
-              url,
-               name: 'upload',
-                type: 'image/jpeg',
-                publicId: url,
-                size: 1,
-                order: existingImages.length + idx + 1,
-                user: { connect: { id: user.id } },
-            }))
-          }
-        }
-         }
-        }
-      })
-    
-  })
-  console.log("updated be room",updatedRoom)
-  return {
-    message:"room updated successfully",
-    updatedRoom
-  }
+          attachments: {
+            update: {
+              uploads: {
+                create: urlToCreate?.map((url, idx) => ({
+                  url,
+                  name: 'upload',
+                  type: 'image/jpeg',
+                  publicId: url,
+                  size: 1,
+                  order: existingImages.length + idx + 1,
+                  user: { connect: { id: user.id } },
+                })),
+              },
+            },
+          },
+        },
+      });
+    });
+    console.log('updated be room', updatedRoom);
+    return {
+      message: 'room updated successfully',
+      updatedRoom,
+    };
   }
 
   async deleteRoom(roomId: string) {

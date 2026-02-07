@@ -72,9 +72,12 @@ model Property {
   name        String
   description String
   address     String
-  city        String
-  country     String
+  email      String
+  phoneNumber  String
+  location     String
+ 
   type        PropertyType @default(APARTMENT)
+  features    String[]
   amenities   String[]
   // images      String[]
 
@@ -90,7 +93,10 @@ model Property {
   bookings     Booking[]
   // uploads     Upload[]
   attachments  Attachments? @relation(fields: [attachmentId], references: [id])
-  attachmentId String
+ 
+   rule     Upload? @relation("PropertyRule", fields: [ruleId], references: [id])
+  ruleId   String? @unique
+  attachmentId String?
   fullText     String       @default("")
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
@@ -242,14 +248,14 @@ model Upload {
    size Int
    order Int
 
-  // property    Property? @relation(fields: [propertyId], references: [id])
-  // propertyId  String?
-  // room        Room?     @relation(fields: [roomId], references: [id])
-  // roomId      String?
   user         User?        @relation(fields: [userId], references: [id])
   userId       String?
-  attachments  Attachments? @relation(fields: [attachmentId], references: [id])
-  attachmentId String?
+ 
+   attachments Attachments? @relation(fields: [attachmentsId], references: [id])
+  attachmentsId String?
+   propertyRule Property? @relation("PropertyRule")
+
+  
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
 }

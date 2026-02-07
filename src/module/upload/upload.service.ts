@@ -19,6 +19,7 @@ async uploadFile(file:Express.Multer.File,order:number,user:userEntity){
            size:file.size,
            order,
            user:connectId(user.id)
+           
         }
     })
     console.log("upload be",data)

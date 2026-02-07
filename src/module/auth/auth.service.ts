@@ -87,6 +87,7 @@ export class AuthService {
         isVerified: true,
         role: true,
         auth: true,
+        properties: { select: { id: true } }
        
       },
     });
@@ -117,7 +118,7 @@ export class AuthService {
     
     return {
       user: user.role,
-      // hotelId:user.hotel?.id
+      hotelId:user.properties?.[0].id
 
     };
   }
