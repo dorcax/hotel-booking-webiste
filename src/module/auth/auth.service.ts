@@ -25,7 +25,6 @@ export class AuthService {
     private readonly authOtpTokenService: AuthOtpTokenService,
     private eventEmitter: EventEmitter2,
     private jwtService: JwtService,
-  
   ) {}
   // check if user already exist before registering them
   async register(dto: registerDto) {
@@ -47,7 +46,7 @@ export class AuthService {
         email,
         gender,
         phoneNumber,
-        role:"GUEST",
+        role: 'GUEST',
         auth: {
           create: {
             password: await argon2.hash(password),
@@ -75,7 +74,7 @@ export class AuthService {
   }
 
   // login in user
-  async login(dto: loginDto,res) {
+  async login(dto: loginDto, res) {
     const { email, password } = dto;
     // check if user exist in the database
     const user = await this.prisma.user.findUnique({
@@ -87,8 +86,7 @@ export class AuthService {
         isVerified: true,
         role: true,
         auth: true,
-        properties: { select: { id: true } }
-       
+        properties: { select: { id: true } },
       },
     });
     mustHave(user, 'invalid credentials', 401);
@@ -105,25 +103,27 @@ export class AuthService {
     if (!matched) bad('invalid credential');
 
     // jwt token
-    const payload = { sub: user.id, role: user.role, };
+    const payload = { sub: user.id, role: user.role };
     const token = await this.jwtService.signAsync(payload);
-   
+
     res.cookie('access_token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV ==="production",
+      secure: process.env.NODE_ENV === 'production',
       sameSite: 'none',
       maxAge: 24 * 60 * 60 * 1000,
     });
     
-    
+    console.log('Login response:', {
+      user: user.role,
+      hotelId: user.properties?.[0].id,
+    });
+
     return {
       user: user.role,
-      hotelId:user.properties?.[0].id
-
+      hotelId: user.properties?.[0].id,
     };
   }
 
-  
   // verify the email
   async verifyEmail(dto: verifyEmailDto) {
     // check if the email exist
@@ -178,7 +178,7 @@ export class AuthService {
     const link = `${process.env.CLIENT_URL}/reset-password/${otpCode.code}`;
     await this.eventEmitter.emit(
       'verification_mail',
-      new Verification_Mail(email,link, emailExist.name, year),
+      new Verification_Mail(email, link, emailExist.name, year),
     );
   }
 
@@ -213,9 +213,6 @@ export class AuthService {
     );
   }
 
-
-
-  
   // reset password
   async resetPassword(dto: resetPasswordDto) {
     const { code, password, email } = dto;
@@ -253,16 +250,14 @@ export class AuthService {
       message: 'password reset successful',
     };
   }
-  // find user 
-  async authUser(user:userEntity){
-    console.log("user",user)
+  // find user
+  async authUser(user: userEntity) {
+    console.log('user', user);
 
     return await this.prisma.user.findUnique({
-      where:{
-        id:user.id
+      where: {
+        id: user.id,
       },
-    
-    })
-
-  } 
+    });
+  }
 }

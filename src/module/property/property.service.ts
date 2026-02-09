@@ -6,10 +6,12 @@ import { PrismaService } from 'src/services/prisma/prisma.service';
 import { bad } from 'src/utils/error';
 import { PropertyType } from '@prisma/client';
 import { connectId, createAttachments } from 'prisma/prisma.util';
+
 @Injectable()
 export class PropertyService {
   constructor(private readonly prisma: PrismaService) {}
 
+  // CREATE PROPERTY
   async create(dto: CreatePropertyDto, user: userEntity) {
     const existingUser = await this.prisma.user.findUnique({
       where: { id: user.id },
@@ -29,9 +31,7 @@ export class PropertyService {
       type: dto.type,
       phoneNumber: dto.phoneNumber,
       rule: dto.rule ? connectId(dto.rule) : undefined,
-      attachments: dto.attachments
-        ? createAttachments(dto.attachments)
-        : undefined,
+      attachments: dto.attachments ? createAttachments(dto.attachments) : undefined,
       amenities: dto.amenities,
       features: dto.features,
       host: connectId(existingUser.id),
@@ -43,6 +43,7 @@ export class PropertyService {
     return { message: 'Property created successfully', property };
   }
 
+  // VERIFY PROPERTY
   async verifyProperty(propertyId: string) {
     const property = await this.prisma.property.findUnique({
       where: { id: propertyId },
@@ -57,6 +58,7 @@ export class PropertyService {
     return { message: 'Property verified successfully' };
   }
 
+  // GET ALL VERIFIED PROPERTIES
   async findAll() {
     return this.prisma.property.findMany({
       where: { isVerified: true },
@@ -64,55 +66,65 @@ export class PropertyService {
     });
   }
 
+  // GET PROPERTIES OF A HOST
   async findHostProperty(user: userEntity) {
     return this.prisma.property.findMany({ where: { hostId: user.id } });
   }
 
+  // GET SINGLE PROPERTY
   async findOne(id: string) {
     const property = await this.prisma.property.findUnique({ where: { id } });
     if (!property) bad('Property not found');
     return property;
   }
 
-  async update(id: string, dto: UpdatePropertyDto) {
-    const { rule, attachments, ...rest } = dto;
+  // UPDATE PROPERTY
+ async update(id: string, dto: UpdatePropertyDto) {
+  const { rule, attachments, ...rest } = dto;
 
-    // Find existing property
-    const property = await this.prisma.property.findUnique({
-      where: { id },
-      include: { attachments: true },
+  // Find existing property
+  const property = await this.prisma.property.findUnique({
+    where: { id },
+    include: { attachments: true }, // one-to-one
+  });
+
+  if (!property) bad('Property not found');
+  if (property.isVerified) bad('You cannot edit a verified property');
+
+  await this.prisma.$transaction(async (tx) => {
+    // 1️⃣ Update main fields
+    await tx.property.update({
+      where: { id: property.id },
+      data: {
+        ...rest,
+        rule: rule ? connectId(rule) : undefined,
+      },
     });
 
-    if (!property) bad('Property not found');
+    // 2️⃣ Handle one-to-one attachment
+    if (attachments && attachments.length > 0) {
+      const newAttachmentId = attachments[0]; // pick first
 
-    await this.prisma.$transaction(async (tx) => {
-      // Update main fields
+      // Delete old attachment if it exists and is different
+      if (property.attachments && property.attachments.id !== newAttachmentId) {
+        await tx.upload.delete({ where: { id: property.attachments.id } });
+      }
+
+      // Connect new attachment
       await tx.property.update({
         where: { id: property.id },
         data: {
-          ...rest,
-          rule: rule ? connectId(rule) : undefined,
-          attachments: attachments?.length
-            ? createAttachments(attachments)
-            : undefined,
+          attachments: { connect: { id: newAttachmentId } },
         },
       });
+    }
+  });
 
-      // Delete old attachments that are NOT in the new list
+  return { message: 'Property updated successfully' };
+}
 
-      if (property.attachments) {
-        const oldAttachmentId = property.attachments.id;
-        if (!attachments?.includes(oldAttachmentId)) {
-          await this.prisma.upload.delete({
-            where: { id: oldAttachmentId },
-          });
-        }
-      }
-    });
 
-    return { message: 'Property updated successfully' };
-  }
-
+  // DELETE PROPERTY
   async remove(propertyId: string, user: userEntity) {
     const property = await this.prisma.property.findUnique({
       where: { id: propertyId },
@@ -124,40 +136,3 @@ export class PropertyService {
     return { message: 'Property deleted successfully' };
   }
 }
-
-// async updateHotel(dto: updateHotelDto, hotelId) {
-//   const { rule, attachments, ...rest } = dto;
-
-//   // find if hotel exist
-//   const hotel = await this.prisma.hotel.findUnique({
-//     where: {
-//       id: hotelId,
-//     },
-//   });
-//   if (!hotel) bad('hotel not found ');
-//   // update the hotel
-//   await this.prisma.$transaction(async (tx) => {
-//     await tx.hotel.update({
-//       where: {
-//         id: hotel.id,
-//       },
-//       data: {
-//         ...rest,
-//         rule: rule ? connectId(rule) : undefined,
-//         attachment: attachments.length
-//           ? updateAttachments(attachments)
-//           : undefined,
-//       },
-//     });
-//     // delete old upload
-//     if (attachments.length) {
-//       await this.prisma.upload.deleteMany({
-//         where: {
-//           id: { notIn: attachments },
-//           attachments: { some: { id: hotel.attachmentId } },
-//         },
-//       });
-//     }
-//   });
-//   return { message: 'hotel updated successfully ' };
-// }
