@@ -112,10 +112,17 @@ export class AuthService {
       secure:true,
       sameSite: 'none',
       maxAge: 24 * 60 * 60 * 1000,
+      path: '/',
     });
     
+  console.log('Cookie set:', {
+    secure: true,
+    sameSite: 'none',
+    nodeEnv: process.env.NODE_ENV
+  });
+    
     console.log('Login response:', {
-      user: user.role,
+      role: user.role,
       hotelId: user.properties?.[0]?.id ||null,
     });
     
