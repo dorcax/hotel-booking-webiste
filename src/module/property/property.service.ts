@@ -88,7 +88,10 @@ export class PropertyService {
     include: { attachments: true }, // one-to-one
   });
 
+
   if (!property) bad('Property not found');
+
+  
   if (property.isVerified) bad('You cannot edit a verified property');
 
   await this.prisma.$transaction(async (tx) => {
@@ -136,3 +139,4 @@ export class PropertyService {
     return { message: 'Property deleted successfully' };
   }
 }
+

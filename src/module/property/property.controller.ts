@@ -20,9 +20,10 @@ import {
 export class PropertyController {
   constructor(private readonly propertyService: PropertyService) {}
 
+  
  
 
-  @Auth([Role.HOST])
+  @Auth([Role.GUEST])
   @Post()
   @ApiOperation({
     summary: 'Create a new property (Host only)',

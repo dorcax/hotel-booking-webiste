@@ -23,11 +23,10 @@ export class createRoomDto {
   @IsArray()
   amenities: string[];
 
-  @ApiProperty({ description: 'Floor number', example: 2 })
-  @Type(() => Number)
-  @IsNumber()
-  floor: number;
 
+
+
+  
   @ApiProperty({ description: 'Maximum occupancy of the room', example: 4 })
   @Type(() => Number)
   @IsNumber()

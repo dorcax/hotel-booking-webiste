@@ -115,12 +115,13 @@ export class AuthService {
     
     console.log('Login response:', {
       user: user.role,
-      hotelId: user.properties?.[0].id,
+      hotelId: user.properties?.[0]?.id ||null,
     });
+    
 
     return {
-      user: user.role,
-      hotelId: user.properties?.[0].id,
+      role: user.role,
+      hotelId: user.properties?.[0]?.id ||null,
     };
   }
 

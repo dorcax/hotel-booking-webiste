@@ -33,7 +33,7 @@ export class RoomService {
   }
  
     if (property.type !== PropertyType.HOTEL) {
-      bad('Rooms can only be created for properties of type HOTEL');
+      bad('Rooms can only be created for property  type of HOTEL');
     }
     // create the room
     const fullText = makeFullText(
@@ -111,6 +111,7 @@ export class RoomService {
       },
     };
 
+    console.log("list",list)
     return {
       list,
       pagination,
