@@ -94,7 +94,7 @@ model Property {
   // uploads     Upload[]
   attachments  Attachments? @relation(fields: [attachmentId], references: [id])
  
-   rule     Upload? @relation("PropertyRule", fields: [ruleId], references: [id])
+  rule     Upload? @relation("PropertyRule", fields: [ruleId], references: [id])
   ruleId   String? @unique
   attachmentId String?
   fullText     String       @default("")
@@ -184,7 +184,7 @@ enum PaymentMethod {
   CARD
   WALLET
   BANK_TRANSFER
-  PAYPAL
+ 
 }
 
 model Payment {

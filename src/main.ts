@@ -8,6 +8,7 @@ dotenv.config()
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.use(cookieParser())
+  
   app.enableCors({
      origin: ['http://localhost:5173',"https://haven-hotel.netlify.app"], // your React/Vite app
     credentials: true,

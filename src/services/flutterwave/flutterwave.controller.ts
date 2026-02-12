@@ -1,9 +1,8 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
-import { FlutterwaveService } from './flutterwave.service';
-import { CreateFlutterwaveDto } from './dto/create-flutterwave.dto';
-import { UpdateFlutterwaveDto } from './dto/update-flutterwave.dto';
-import { AuthUser } from 'src/module/auth/deocorator/auth.decorator';
+import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
 import { userEntity } from 'src/module/auth/auth.types';
+import { AuthUser } from 'src/module/auth/deocorator/auth.decorator';
+import { CreateFlutterwaveDto } from './dto/create-flutterwave.dto';
+import { FlutterwaveService } from './flutterwave.service';
 
 @Controller('flutterwave')
 export class FlutterwaveController {
@@ -25,8 +24,8 @@ export class FlutterwaveController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateFlutterwaveDto: UpdateFlutterwaveDto) {
-    return this.flutterwaveService.update(+id, updateFlutterwaveDto);
+  update(@Param('id') id: string) {
+    return this.flutterwaveService.update(+id);
   }
 
   @Delete(':id')

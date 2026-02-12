@@ -1,14 +1,14 @@
+import { HttpService } from '@nestjs/axios';
 import { Injectable } from '@nestjs/common';
+import { connectId } from 'prisma/prisma.util';
+import { userEntity } from 'src/module/auth/auth.types';
+import { generateTransactionRef } from 'src/utils/ref.util';
+import { PrismaService } from '../prisma/prisma.service';
 import {
   CreateFlutterwaveDto,
   FLUTTERWAVE_INITIATE_PAYMENT,
 } from './dto/create-flutterwave.dto';
-import { UpdateFlutterwaveDto } from './dto/update-flutterwave.dto';
-import { HttpService } from '@nestjs/axios';
-import { PrismaService } from '../prisma/prisma.service';
-import { generateTransactionRef } from 'src/utils/ref.util';
-import { connectId } from 'prisma/prisma.util';
-import { userEntity } from 'src/module/auth/auth.types';
+// import { UpdateFlutterwaveDto } from './dto/update-flutterwave.dto';
 
 @Injectable()
 export class FlutterwaveService {
@@ -20,7 +20,7 @@ export class FlutterwaveService {
     createFlutterwaveDto: CreateFlutterwaveDto,
     user: userEntity,
   ) {
-    const { roomId, amount, currency, reservationId } = createFlutterwaveDto;
+    const { roomId, amount, currency, reservationId  } = createFlutterwaveDto;
     const txRef = await generateTransactionRef();
     try {
       // create a transaction table to show record
@@ -28,7 +28,7 @@ export class FlutterwaveService {
         data: {
           amount,
           currency,
-         reference: txRef,
+          reference: txRef,
           user: connectId(user.id),
           redirectUrl: 'http://localhost:3000/payment/success',
           room: connectId(roomId),
@@ -44,6 +44,8 @@ export class FlutterwaveService {
           amount,
           currency,
           redirectUrl: process.env.FLW_REDIRECT_URL,
+          
+           payment_options: "card,banktransfer,ussd,qr",
           customer: {
             email: user.email,
             
@@ -87,7 +89,7 @@ export class FlutterwaveService {
     return `This action returns a #${id} flutterwave`;
   }
 
-  update(id: number, updateFlutterwaveDto: UpdateFlutterwaveDto) {
+  update(id: number) {
     return `This action updates a #${id} flutterwave`;
   }
 

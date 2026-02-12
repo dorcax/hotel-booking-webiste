@@ -8,7 +8,10 @@ import { FlutterwaveService } from 'src/services/flutterwave/flutterwave.service
 
 @Injectable()
 export class ReservationService {
-  constructor(private readonly prisma: PrismaService,private readonly flutterWave:FlutterwaveService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly flutterWave: FlutterwaveService,
+  ) {}
 
   async createBooking(dto: CreateReservationDto) {
     const { user, checkIn, checkOut, roomId, propertyId } = dto;
@@ -38,7 +41,7 @@ export class ReservationService {
     if (!room) bad('room not found');
     // Check if room is already booked in the date range
     const reservation = await this.prisma.$transaction(async (tx) => {
-     const roomIsAvailable = await tx.booking.findFirst({
+      const roomIsAvailable = await tx.booking.findFirst({
         where: {
           roomId,
           AND: [{ checkIn: { lt: checkOut } }, { checkOut: { gt: checkIn } }],
@@ -52,10 +55,13 @@ export class ReservationService {
 
       // calculate the amount of night the user want to stay
       const millisecondsInOneDay = 1000 * 60 * 60 * 24;
-      const nights =Math.ceil( (new Date(checkOut).getTime() - new Date(checkIn).getTime())/millisecondsInOneDay);
+      const nights = Math.ceil(
+        (new Date(checkOut).getTime() - new Date(checkIn).getTime()) /
+          millisecondsInOneDay,
+      );
       const totalCalculation = (nights / millisecondsInOneDay) * room.price;
 
-         const newReservation =  await tx.booking.create({
+      const newReservation = await tx.booking.create({
         data: {
           checkIn,
           checkOut,
@@ -66,19 +72,25 @@ export class ReservationService {
           room: connectId(roomId),
         },
       });
-      return newReservation
-
-      
+      return newReservation;
     });
-    const totalAmount =reservation.totalPrice
+    const totalAmount = reservation?.totalPrice;
 
-    const  reservationLink =await this.flutterWave.initiatePayment({amount:totalAmount, currency: 'NGN', roomId,reservationId:reservation.id},user)
-        return {
-      message: 'Room reservation created successfully. Please complete payment.',
+    const reservationLink = await this.flutterWave.initiatePayment(
+      {
+        amount: totalAmount,
+        currency: 'NGN',
+        roomId,
+        reservationId: reservation.id,
+      },
+      user,
+    );
+    return {
+      message:
+        'Room reservation created successfully. Please complete payment.',
       reservation,
-      
+
       paymentLink: reservationLink?.payment_link,
     };
-
   }
 }

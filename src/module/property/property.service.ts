@@ -31,7 +31,9 @@ export class PropertyService {
       type: dto.type,
       phoneNumber: dto.phoneNumber,
       rule: dto.rule ? connectId(dto.rule) : undefined,
-      attachments: dto.attachments ? createAttachments(dto.attachments) : undefined,
+      attachments: dto.attachments
+        ? createAttachments(dto.attachments)
+        : undefined,
       amenities: dto.amenities,
       features: dto.features,
       host: connectId(existingUser.id),
@@ -43,12 +45,14 @@ export class PropertyService {
     return { message: 'Property created successfully', property };
   }
 
-  // VERIFY PROPERTY
+  // VERIFY PROPERTY by admin
   async verifyProperty(propertyId: string) {
     const property = await this.prisma.property.findUnique({
       where: { id: propertyId },
     });
     if (!property) bad('Property not found');
+    // check if the property have already been approve
+    if (property.isVerified) bad('the property have already been verified ');
 
     await this.prisma.property.update({
       where: { id: propertyId },
@@ -58,7 +62,7 @@ export class PropertyService {
     return { message: 'Property verified successfully' };
   }
 
-  // GET ALL VERIFIED PROPERTIES
+  // GET ALL VERIFIED PROPERTIES by admin
   async findAll() {
     return this.prisma.property.findMany({
       where: { isVerified: true },
@@ -79,64 +83,135 @@ export class PropertyService {
   }
 
   // UPDATE PROPERTY
- async update(id: string, dto: UpdatePropertyDto) {
-  const { rule, attachments, ...rest } = dto;
+  //  async update(id: string, dto: UpdatePropertyDto) {
+  //   const { rule, attachments, ...rest } = dto;
 
-  // Find existing property
-  const property = await this.prisma.property.findUnique({
-    where: { id },
-    include: { attachments: true }, // one-to-one
-  });
+  //   // Find existing property
+  //   const property = await this.prisma.property.findUnique({
+  //     where: { id },
+  //     include: { attachments: true }, // one-to-one
+  //   });
 
+  //   if (!property) bad('Property not found');
 
-  if (!property) bad('Property not found');
+  //   if (property.isVerified) bad('You cannot edit a verified property');
 
-  
-  if (property.isVerified) bad('You cannot edit a verified property');
+  //   await this.prisma.$transaction(async (tx) => {
+  //     // 1️⃣ Update main fields
+  //     await tx.property.update({
+  //       where: { id: property.id },
+  //       data: {
+  //         ...rest,
+  //         rule: rule ? connectId(rule) : undefined,
+  //       },
+  //     });
 
-  await this.prisma.$transaction(async (tx) => {
-    // 1️⃣ Update main fields
-    await tx.property.update({
-      where: { id: property.id },
-      data: {
-        ...rest,
-        rule: rule ? connectId(rule) : undefined,
+  //     // 2️⃣ Handle one-to-one attachment
+  //     if (attachments && attachments.length > 0) {
+  //       const newAttachmentId = attachments[0]; // pick first
+
+  //       // Delete old attachment if it exists and is different
+  //       if (property.attachments && property.attachments.id !== newAttachmentId) {
+  //         await tx.upload.delete({ where: { id: property.attachments.id } });
+  //       }
+
+  //       // Connect new attachment
+  //       await tx.property.update({
+  //         where: { id: property.id },
+  //         data: {
+  //           attachments: { connect: { id: newAttachmentId } },
+  //         },
+  //       });
+  //     }
+  //   });
+
+  //   return { message: 'Property updated successfully' };
+  // }
+
+  async update(id: string, dto: UpdatePropertyDto) {
+    const { rule, attachments, ...rest } = dto;
+
+    // Find existing property
+    const property = await this.prisma.property.findUnique({
+      where: { id },
+      include: {
+        attachments: { include: { uploads: true } }, // load existing uploads
       },
     });
 
-    // 2️⃣ Handle one-to-one attachment
-    if (attachments && attachments.length > 0) {
-      const newAttachmentId = attachments[0]; // pick first
+    if (!property) bad('Property not found');
 
-      // Delete old attachment if it exists and is different
-      if (property.attachments && property.attachments.id !== newAttachmentId) {
-        await tx.upload.delete({ where: { id: property.attachments.id } });
-      }
+    if (property.isVerified) bad('You cannot edit a verified property');
 
-      // Connect new attachment
+    // property validation
+    if (
+      rest.type === PropertyType.APARTMENT &&
+      (!rest.price || !rest.capacity)
+    ) {
+      bad('Price and capacity required for apartments');
+    }
+    if (rest.type === PropertyType.HOTEL && (rest.price || rest.capacity)) {
+      bad('Hotels should not have price or capacity');
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      // 1️⃣ Update main fields
       await tx.property.update({
         where: { id: property.id },
         data: {
-          attachments: { connect: { id: newAttachmentId } },
+          ...rest,
+          rule: rule ? connectId(rule) : undefined,
         },
       });
-    }
-  });
 
-  return { message: 'Property updated successfully' };
-}
+      
+      if (attachments && attachments.length > 0) {
+        const newAttachmentId = attachments[0];
 
+      
+        if (
+          property.attachments &&
+          property.attachments.id !== newAttachmentId
+        ) {
+          for (const upload of property.attachments.uploads) {
+            await tx.upload.delete({ where: { id: upload.id } });
+          }
+        }
+
+        // Connect new attachment
+        await tx.property.update({
+          where: { id: property.id },
+          data: {
+            attachments: { connect: { id: newAttachmentId } },
+          },
+        });
+      }
+    });
+
+    return { message: 'Property updated successfully' };
+  }
 
   // DELETE PROPERTY
   async remove(propertyId: string, user: userEntity) {
     const property = await this.prisma.property.findUnique({
       where: { id: propertyId },
+      include: {
+        bookings: true,
+      },
     });
     if (!property || property.hostId !== user.id)
       bad('Property not found or you are not the owner');
+    // prevent deletion if they are active booking
+    const activeBooking = await this.prisma.booking.findFirst({
+      where: {
+        propertyId,
+        status: { in: ['PENDING', 'CONFIRMED'] },
+      },
+    });
+    if (activeBooking)
+      bad('you can not delete a property that have active booking');
 
     await this.prisma.property.delete({ where: { id: property.id } });
     return { message: 'Property deleted successfully' };
   }
 }
-

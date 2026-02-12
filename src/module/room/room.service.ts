@@ -1,15 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from 'src/services/prisma/prisma.service';
-import { createRoomDto, listRoomQuery, updateRoomDto } from './room.type';
+import { Prisma, PropertyType } from '@prisma/client';
 import {
   connectId,
-  createAttachments,
-  updateAttachments,
+  createAttachments
 } from 'prisma/prisma.util';
-import { userEntity } from '../auth/auth.types';
+import { PrismaService } from 'src/services/prisma/prisma.service';
 import { bad } from 'src/utils/error';
 import { makeFullText, searchQuery } from 'src/utils/filter';
-import { Prisma, PropertyType } from '@prisma/client';
+import { userEntity } from '../auth/auth.types';
+import { createRoomDto, listRoomQuery, updateRoomDto } from './room.type';
 
 @Injectable()
 export class RoomService {
