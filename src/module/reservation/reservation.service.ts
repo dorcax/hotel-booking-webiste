@@ -5,7 +5,6 @@ import { PrismaService } from 'src/services/prisma/prisma.service';
 import { bad } from 'src/utils/error';
 import { CreateReservationDto } from './reservation.type';
 import { FlutterwaveService } from 'src/services/flutterwave/flutterwave.service';
-
 @Injectable()
 export class ReservationService {
   constructor(
@@ -22,6 +21,10 @@ export class ReservationService {
 
     if (new Date(checkIn) < new Date())
       return bad('Check-in date cannot be in the past');
+
+
+    if (!!roomId === !!propertyId)
+    return bad('You must book either an apartment or a room, not both');
     // verify if user exist
     const existingUser = await this.prisma.user.findUnique({
       where: {
@@ -94,3 +97,5 @@ export class ReservationService {
     };
   }
 }
+
+

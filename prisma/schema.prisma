@@ -68,20 +68,18 @@ model AuthOtpToken {
 }
 
 model Property {
-  id          String       @id @default(uuid())
+  id          String @id @default(uuid())
   name        String
   description String
   address     String
-  email      String
-  phoneNumber  String
-  location     String
- 
-  type        PropertyType @default(APARTMENT)
-  features    String[]
-  amenities   String[]
-  // images      String[]
+  email       String
+  phoneNumber String
+  location    String
 
-  // Apartment-specific fields
+  type      PropertyType @default(APARTMENT)
+  features  String[]
+  amenities String[]
+  
   price      Float?
   capacity   Int?
   isVerified Boolean @default(false)
@@ -89,18 +87,20 @@ model Property {
   host   User   @relation(fields: [hostId], references: [id])
   hostId String
 
-  rooms        Room[]
-  bookings     Booking[]
+  rooms       Room[]
+  bookings    Booking[]
   // uploads     Upload[]
-  attachments  Attachments? @relation(fields: [attachmentId], references: [id])
- 
-  rule     Upload? @relation("PropertyRule", fields: [ruleId], references: [id])
-  ruleId   String? @unique
+  attachments Attachments? @relation(fields: [attachmentId], references: [id])
+
+  rule         Upload?  @relation("PropertyRule", fields: [ruleId], references: [id])
+  ruleId       String?  @unique
   attachmentId String?
-  fullText     String       @default("")
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  fullText     String   @default("")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
+
+
 
 enum RoomCategory {
   SINGLE
@@ -157,13 +157,16 @@ model Booking {
   roomId   String?
   fullText String  @default("")
 
-  expiresAt  DateTime
+  expiresAt DateTime
 
   payment      Payment[]
   transactions Transaction[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([propertyId, checkIn, checkOut])
+  @@index([roomId, checkIn, checkOut])
 }
 
 model Attachments {
@@ -184,14 +187,13 @@ enum PaymentMethod {
   CARD
   WALLET
   BANK_TRANSFER
- 
 }
 
 model Payment {
-  id            String        @id @default(uuid())
+  id            String         @id @default(uuid())
   amount        Float
-  currency      String        @default("USD")
-  status        PaymentStatus @default(PENDING)
+  currency      String         @default("USD")
+  status        PaymentStatus  @default(PENDING)
   method        PaymentMethod?
   transactionId String?
 
@@ -216,15 +218,15 @@ enum TransactionStatus {
 }
 
 model Transaction {
-  id        String            @id @default(uuid())
-  amount     Int
-  currency  String            @default("USD")
-  status    TransactionStatus @default(PENDING)
+  id          String            @id @default(uuid())
+  amount      Int
+  currency    String            @default("USD")
+  status      TransactionStatus @default(PENDING)
   // method    PaymentMethod?
-  reference String?
-  response  String?
+  reference   String?
+  response    String?
   redirectUrl String?
-  flwRef  String?
+  flwRef      String?
 
   user   User   @relation(fields: [userId], references: [id])
   userId String
@@ -240,22 +242,21 @@ model Transaction {
 }
 
 model Upload {
-  id   String @id @default(uuid())
-  name String
-  url  String
+  id       String @id @default(uuid())
+  name     String
+  url      String
   publicId String
-  type String
-   size Int
-   order Int
+  type     String
+  size     Int
+  order    Int
 
-  user         User?        @relation(fields: [userId], references: [id])
-  userId       String?
- 
-   attachments Attachments? @relation(fields: [attachmentsId], references: [id])
+  user   User?   @relation(fields: [userId], references: [id])
+  userId String?
+
+  attachments   Attachments? @relation(fields: [attachmentsId], references: [id])
   attachmentsId String?
-   propertyRule Property? @relation("PropertyRule")
+  propertyRule  Property?    @relation("PropertyRule")
 
-  
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

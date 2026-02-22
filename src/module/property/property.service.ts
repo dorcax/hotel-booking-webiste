@@ -18,6 +18,7 @@ export class PropertyService {
     });
     if (!existingUser) bad('User not found');
 
+
     if (dto.type === PropertyType.APARTMENT && (!dto.price || !dto.capacity)) {
       bad('Price and capacity required for apartments');
     }
@@ -51,7 +52,7 @@ export class PropertyService {
       where: { id: propertyId },
     });
     if (!property) bad('Property not found');
-    // check if the property have already been approve
+ 
     if (property.isVerified) bad('the property have already been verified ');
 
     await this.prisma.property.update({
@@ -76,57 +77,14 @@ export class PropertyService {
   }
 
   // GET SINGLE PROPERTY
+  
   async findOne(id: string) {
     const property = await this.prisma.property.findUnique({ where: { id } });
     if (!property) bad('Property not found');
     return property;
   }
 
-  // UPDATE PROPERTY
-  //  async update(id: string, dto: UpdatePropertyDto) {
-  //   const { rule, attachments, ...rest } = dto;
 
-  //   // Find existing property
-  //   const property = await this.prisma.property.findUnique({
-  //     where: { id },
-  //     include: { attachments: true }, // one-to-one
-  //   });
-
-  //   if (!property) bad('Property not found');
-
-  //   if (property.isVerified) bad('You cannot edit a verified property');
-
-  //   await this.prisma.$transaction(async (tx) => {
-  //     // 1️⃣ Update main fields
-  //     await tx.property.update({
-  //       where: { id: property.id },
-  //       data: {
-  //         ...rest,
-  //         rule: rule ? connectId(rule) : undefined,
-  //       },
-  //     });
-
-  //     // 2️⃣ Handle one-to-one attachment
-  //     if (attachments && attachments.length > 0) {
-  //       const newAttachmentId = attachments[0]; // pick first
-
-  //       // Delete old attachment if it exists and is different
-  //       if (property.attachments && property.attachments.id !== newAttachmentId) {
-  //         await tx.upload.delete({ where: { id: property.attachments.id } });
-  //       }
-
-  //       // Connect new attachment
-  //       await tx.property.update({
-  //         where: { id: property.id },
-  //         data: {
-  //           attachments: { connect: { id: newAttachmentId } },
-  //         },
-  //       });
-  //     }
-  //   });
-
-  //   return { message: 'Property updated successfully' };
-  // }
 
   async update(id: string, dto: UpdatePropertyDto) {
     const { rule, attachments, ...rest } = dto;

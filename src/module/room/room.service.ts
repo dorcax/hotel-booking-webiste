@@ -26,7 +26,6 @@ export class RoomService {
     });
       
     
-    
     if (!property || property.hostId !== user.id) {
     bad('Property not found or you are not the owner');
   }
@@ -39,7 +38,7 @@ export class RoomService {
       rest,
       {},
       'description',
-      'roomNumber',
+      'title',
       'category',
     );
    

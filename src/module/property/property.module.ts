@@ -7,4 +7,5 @@ import { PrismaService } from 'src/services/prisma/prisma.service';
   controllers: [PropertyController],
   providers: [PropertyService,PrismaService],
 })
+
 export class PropertyModule {}
