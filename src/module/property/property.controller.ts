@@ -159,7 +159,7 @@ export class PropertyController {
     return this.propertyService.update(id, updatePropertyDto);
   }
 
-  @Auth([Role.HOST])
+  @Auth([Role.GUEST])
   @Delete(':propertyId')
   @ApiOperation({
     summary: 'Delete property (Host only)',
