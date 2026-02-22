@@ -68,6 +68,24 @@ export class PropertyController {
   }
 
 
+  @Auth([Role.GUEST])
+  @Get("host")
+  @ApiOperation({
+    summary: 'Get all properties created by host',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'List of properties retrieved successfully',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Only HOST can access this endpoint',
+  })
+  findHostProperty( @AuthUser() user: userEntity) {
+    return this.propertyService.findHostProperty(user);
+  }
+
+
   @Auth()
   @Get(':id')
   @ApiOperation({
