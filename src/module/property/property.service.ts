@@ -73,11 +73,15 @@ export class PropertyService {
 
   // GET PROPERTIES OF A HOST
   async findHostProperty(user: userEntity) {
-    return this.prisma.property.findMany({ where: { hostId: user.id } });
+    return this.prisma.property.findMany({ where: { hostId: user.id } ,include:{attachments:{
+      select:{
+        uploads:true
+      }
+    }}});
   }
 
   // GET SINGLE PROPERTY
-  
+
   async findOne(id: string) {
     const property = await this.prisma.property.findUnique({ where: { id } });
     if (!property) bad('Property not found');
