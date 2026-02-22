@@ -1,11 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { CreatePropertyDto } from './dto/create-property.dto';
+import { CreatePropertyDto, listPropertyQuery } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
 import { userEntity } from '../auth/auth.types';
 import { PrismaService } from 'src/services/prisma/prisma.service';
 import { bad } from 'src/utils/error';
-import { PropertyType } from '@prisma/client';
+import { Prisma, PropertyType } from '@prisma/client';
 import { connectId, createAttachments } from 'prisma/prisma.util';
+import { searchQuery } from 'src/utils/filter';
 
 @Injectable()
 export class PropertyService {
@@ -72,12 +73,63 @@ export class PropertyService {
   }
 
   // GET PROPERTIES OF A HOST
-  async findHostProperty(user: userEntity) {
-    return this.prisma.property.findMany({ where: { hostId: user.id } ,include:{attachments:{
-      select:{
-        uploads:true
-      }
-    }}});
+  async findHostProperty(query:listPropertyQuery,user: userEntity) {
+    
+    const search =searchQuery(query.search ??"")
+    const take=+query.count ||10
+    const page =query.page ||1
+    const skip =take*(page-1)
+     const orderBy = { createdAt: 'desc' } as const;
+     const [list, totalCount, apartmentCount,hotelCount] = await Promise.all([
+      this.prisma.property.findMany({
+        where: {
+          hostId:user.id,
+          fullText: search ? { search } : undefined,
+        },
+        skip,
+        take,
+        orderBy,
+        include: {
+          attachments: {
+            select: {
+              uploads: true,
+            },
+          },
+        },
+      }),
+      this.prisma.property.count({ where:{hostId:user.id} }),
+      this.prisma.property.count({
+        where: {
+          hostId:user.id,
+          type:PropertyType.APARTMENT,
+        },
+      }),
+      this.prisma.property.count({
+        where: {
+       hostId:user.id,
+          type:PropertyType.HOTEL ,
+        },
+      }),
+    ]);
+    const totalPages = take ? Math.ceil(totalCount / take) : 1;
+
+    const pagination = {
+      page,
+      totalCount,
+      totalPages,
+      filterCounts: {
+        TOTAL: totalCount,
+        APARTMENT:apartmentCount,
+        HOTEL: hotelCount,
+      },
+    };
+
+    console.log("list",list)
+    return {
+      list,
+      pagination,
+    };
+  
   }
 
   // GET SINGLE PROPERTY

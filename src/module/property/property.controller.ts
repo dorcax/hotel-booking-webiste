@@ -1,8 +1,8 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { userEntity } from '../auth/auth.types';
 import { Auth, AuthUser } from '../auth/deocorator/auth.decorator';
-import { CreatePropertyDto } from './dto/create-property.dto';
+import { CreatePropertyDto, listPropertyQuery } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
 import { PropertyService } from './property.service';
 import {
@@ -81,8 +81,8 @@ export class PropertyController {
     status: 403,
     description: 'Only HOST can access this endpoint',
   })
-  findHostProperty( @AuthUser() user: userEntity) {
-    return this.propertyService.findHostProperty(user);
+  findHostProperty(@Query() query: listPropertyQuery,@AuthUser() user: userEntity) {
+    return this.propertyService.findHostProperty(query,user);
   }
 
 

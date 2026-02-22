@@ -7,10 +7,12 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  IsUUID,
   Length,
   Min,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { PaginationqueryDto } from 'src/utils/paginationQuery.type';
 
 export class CreatePropertyDto {
   @ApiProperty({
@@ -131,4 +133,8 @@ export class CreatePropertyDto {
   })
   @IsArray()
   attachments: string[];
+}
+
+export class listPropertyQuery extends PaginationqueryDto {
+
 }
