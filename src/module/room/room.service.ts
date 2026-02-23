@@ -25,7 +25,7 @@ export class RoomService {
       },
     });
       
-    
+    console.log("property",property)
     if (!property || property.hostId !== user.id) {
     bad('Property not found or you are not the owner');
   }
