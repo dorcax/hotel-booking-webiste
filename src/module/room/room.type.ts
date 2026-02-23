@@ -41,6 +41,10 @@ export class createRoomDto {
   attachments: string[];
 
   
+  @IsString()
+  propertyId:string
+
+  
 }
 
 

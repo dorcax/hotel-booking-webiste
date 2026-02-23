@@ -15,7 +15,7 @@ export class RoomService {
   constructor(private prisma: PrismaService) {}
 
   async createRoom(dto: createRoomDto, user: userEntity) {
-    const { attachments, ...rest } = dto;
+    const { attachments,propertyId, ...rest  } = dto;
 
     // find the hotel exist
     const property = await this.prisma.property.findFirst({
@@ -46,7 +46,7 @@ export class RoomService {
       data: {
         ...rest,
         fullText,
-        property: connectId(property.id),
+        property: connectId(propertyId),
         attachments: createAttachments(attachments),
       },
     });

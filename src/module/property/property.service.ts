@@ -6,7 +6,7 @@ import { PrismaService } from 'src/services/prisma/prisma.service';
 import { bad } from 'src/utils/error';
 import { Prisma, PropertyType } from '@prisma/client';
 import { connectId, createAttachments } from 'prisma/prisma.util';
-import { searchQuery } from 'src/utils/filter';
+import { makeFullText, searchQuery } from 'src/utils/filter';
 
 @Injectable()
 export class PropertyService {
@@ -14,6 +14,7 @@ export class PropertyService {
 
   // CREATE PROPERTY
   async create(dto: CreatePropertyDto, user: userEntity) {
+    
     const existingUser = await this.prisma.user.findUnique({
       where: { id: user.id },
     });
@@ -23,7 +24,14 @@ export class PropertyService {
     if (dto.type === PropertyType.APARTMENT && (!dto.price || !dto.capacity)) {
       bad('Price and capacity required for apartments');
     }
-
+      const fullText = makeFullText(
+           dto,
+           {},
+           'description',
+           'title',
+           'price',
+           "type"
+         );
     const propertyData: any = {
       name: dto.name,
       description: dto.description,
@@ -41,6 +49,7 @@ export class PropertyService {
       host: connectId(existingUser.id),
       price: dto.price,
       capacity: dto.capacity,
+      fullText
     };
 
     const property = await this.prisma.property.create({ data: propertyData });
