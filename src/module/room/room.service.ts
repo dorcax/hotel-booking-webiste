@@ -154,78 +154,94 @@ export class RoomService {
   }
 
   //   update room
-  async updateRoom(dto: updateRoomDto, user: userEntity, roomId: string) {
-    const { attachments, ...rest } = dto;
-    console.log('images to be updated', attachments);
-    // check if room exist
+// Update room
+async updateRoom(dto: updateRoomDto, user: userEntity, roomId: string) {
+  const { attachments, ...rest } = dto;
+  console.log('images to be updated', attachments);
 
-    const room = await this.prisma.room.findUnique({
+  // Check if room exists
+  const room = await this.prisma.room.findUnique({
+    where: { id: roomId },
+    include: {
+      attachments: {
+        include: {
+          uploads: true, // Use 'include' instead of 'select' to get full upload objects
+        },
+      },
+    },
+  });
+
+  if (!room) {
+    throw new Error('Room not found'); // Fixed error message
+  }
+
+  // Get existing image URLs
+  const existingImages = room.attachments?.uploads?.map((img: any) => img.url) || [];
+  console.log('existing images', existingImages);
+
+  // Determine which images to delete and create
+  const urlsToDelete = existingImages.filter(
+    (url) => !attachments?.includes(url),
+  );
+  
+  const urlsToCreate = attachments?.filter(
+    (url) => !existingImages.includes(url),
+  ) || [];
+
+  // Perform update in transaction
+  const updatedRoom = await this.prisma.$transaction(async (tx) => {
+    // Delete removed uploads
+    if (urlsToDelete.length > 0) {
+      await tx.upload.deleteMany({
+        where: {
+          url: { in: urlsToDelete },
+          attachmentsId: room.attachments?.id, 
+        },
+      });
+    }
+
+    // Update room info and handle new attachments
+    if (urlsToCreate.length > 0) {
+      // Create new uploads
+      await tx.upload.createMany({
+        data: urlsToCreate.map((url, idx) => ({
+          url,
+          name: `upload-${Date.now()}-${idx}`,
+          type: 'image/jpeg',
+          publicId: url.split('/').pop() || url, // Better publicId extraction
+          size: 0,
+          order: (room.attachments?.uploads?.length || 0) + idx + 1,
+          userId: user.id,
+          roomAttachmentId: room.attachments?.id,
+        })),
+      });
+    }
+
+    // Update room basic info
+    return tx.room.update({
       where: { id: roomId },
+      data: {
+        ...rest,
+        // Only update the updatedAt timestamp if needed
+        updatedAt: new Date(),
+      },
       include: {
         attachments: {
-          select: {
+          include: {
             uploads: true,
           },
         },
       },
     });
+  });
 
-    if (!room) {
-      throw new Error('Hotel not found');
-    }
-
-    const existingImages = room.attachments.uploads.map((img: any) => img.url);
-    console.log('attachment image to be updated', existingImages);
-
-    //  determine which image to delete
-    const urlToDelete = existingImages.filter(
-      (url) => !dto.attachments?.includes(url),
-    );
-    const urlToCreate = dto.attachments?.filter(
-      (url) => !existingImages.includes(url),
-    );
-
-    const updatedRoom = await this.prisma.$transaction(async (tx) => {
-      // delete remove upload
-      if (urlToDelete.length) {
-        await tx.upload.deleteMany({
-          where: {
-            url: { in: urlToDelete },
-          },
-        });
-      }
-      // update the room info
-
-      await tx.room.update({
-        where: {
-          id: room.id,
-        },
-        data: {
-          ...rest,
-          attachments: {
-            update: {
-              uploads: {
-                create: urlToCreate?.map((url, idx) => ({
-                  url,
-                  name: 'upload',
-                  type: 'image/jpeg',
-                  publicId: url,
-                  size: 1,
-                  order: existingImages.length + idx + 1,
-                  user: { connect: { id: user.id } },
-                })),
-              },
-            },
-          },
-        },
-      });
-    });
-    console.log('updated be room', updatedRoom);
-    return {
-      message: 'room updated successfully',
-      updatedRoom,
-    };
-  }
+  console.log('updated room', updatedRoom);
+  
+  return {
+    message: 'Room updated successfully',
+    updatedRoom,
+  };
+}
 
   async deleteRoom(roomId: string) {
     const room = await this.prisma.room.findFirst({
