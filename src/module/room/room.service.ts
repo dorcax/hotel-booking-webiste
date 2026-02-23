@@ -18,9 +18,9 @@ export class RoomService {
     const { attachments,propertyId, ...rest  } = dto;
 
     // find the hotel exist
-    const property = await this.prisma.property.findFirst({
+    const property = await this.prisma.property.findUnique({
       where: {
-        hostId: user.id,
+        id: propertyId,
         
       },
     });
