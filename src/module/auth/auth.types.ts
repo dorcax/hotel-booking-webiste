@@ -45,7 +45,7 @@ export class registerDto {
   @IsString()
   password: string;
   
-  @IsEnum({default:Role.GUEST})
+  @IsEnum(Role)
   role:Role
 }
 
