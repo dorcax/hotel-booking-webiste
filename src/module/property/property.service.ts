@@ -77,6 +77,9 @@ export class PropertyService {
   async findAll() {
     return this.prisma.property.findMany({
       where: { isVerified: true },
+      include:{attachments:{select:{
+        uploads:true
+      }}},
       orderBy: { createdAt: 'desc' },
     });
   }
