@@ -1,4 +1,4 @@
-import { IsEmail, IsString } from 'class-validator';
+import { IsEmail, IsEnum, IsString } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Role } from '@prisma/client';
 
@@ -44,6 +44,9 @@ export class registerDto {
   })
   @IsString()
   password: string;
+  
+  @IsEnum({default:Role.GUEST})
+  role:Role
 }
 
 // login dto
