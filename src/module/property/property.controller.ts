@@ -50,7 +50,7 @@ export class PropertyController {
 
 
 
-  @Auth([Role.GUEST])
+  // @Auth([Role.GUEST])
   @Get()
   @ApiOperation({
     summary: 'Get all properties created by host',
